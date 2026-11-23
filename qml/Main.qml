@@ -141,6 +141,27 @@ ApplicationWindow {
     readonly property var pathList: { canvas.layers; try { const p = JSON.parse(canvas.ask("path.list", "{}")); return p ? p.paths.map(x => typeof x === "string" ? { name: x } : x) : []; } catch (e) { return []; } }
     readonly property var historyState: { try { return JSON.parse(canvas.history); } catch (e) { return { names: [], applied: 0 }; } }
     readonly property var swatchGroups: { try { return JSON.parse(canvas.ask("swatches.list", "{}")).groups; } catch (e) { return []; } }
+    // The sliders of each adjustment (the parameters of layer.setAdjustment); `index` picks one value of a list
+    readonly property var adjSchema: ({
+        levels: [{ key: "inBlack", label: "Input black", min: 0, max: 253 }, { key: "gamma", label: "Gamma", min: 0.1, max: 9.99, decimals: 2 }, { key: "inWhite", label: "Input white", min: 2, max: 255 },
+            { key: "outBlack", label: "Output black", min: 0, max: 255 }, { key: "outWhite", label: "Output white", min: 0, max: 255 }],
+        hueSaturation: [{ key: "hue", label: "Hue", min: -180, max: 180 }, { key: "saturation", label: "Saturation", min: -100, max: 100 }, { key: "lightness", label: "Lightness", min: -100, max: 100 }],
+        brightnessContrast: [{ key: "brightness", label: "Brightness", min: -150, max: 150 }, { key: "contrast", label: "Contrast", min: -50, max: 100 }],
+        vibrance: [{ key: "vibrance", label: "Vibrance", min: -100, max: 100 }, { key: "saturation", label: "Saturation", min: -100, max: 100 }],
+        exposure: [{ key: "exposure", label: "Exposure", min: -20, max: 20, decimals: 2 }, { key: "offset", label: "Offset", min: -0.5, max: 0.5, decimals: 3 }, { key: "gamma", label: "Gamma", min: 0.01, max: 9.99, decimals: 2 }],
+        threshold: [{ key: "level", label: "Threshold level", min: 1, max: 255 }],
+        posterize: [{ key: "levels", label: "Levels", min: 2, max: 255 }],
+        photoFilter: [{ key: "density", label: "Density", min: 1, max: 100 }],
+        blackWhite: [{ key: "reds", label: "Reds", min: -200, max: 300 }, { key: "yellows", label: "Yellows", min: -200, max: 300 }, { key: "greens", label: "Greens", min: -200, max: 300 },
+            { key: "cyans", label: "Cyans", min: -200, max: 300 }, { key: "blues", label: "Blues", min: -200, max: 300 }, { key: "magentas", label: "Magentas", min: -200, max: 300 }],
+        colorBalance: ["shadows", "midtones", "highlights"].reduce((a, k) => a.concat(["Cyan - Red", "Magenta - Green", "Yellow - Blue"].map((l, i) => ({ key: k, index: i, label: Fili.tr(k[0].toUpperCase() + k.slice(1)) + " · " + l, min: -100, max: 100 }))), [])
+    })
+    readonly property var adjustmentSliders: adjustment && !curvesShown ? (adjSchema[adjustment.kind] ?? []) : []
+    function adjustmentParams(row, v) {
+        const p = { layer: activeLayer.id };
+        if (row.index !== undefined) { const a = adjustment.params[row.key].slice(); a[row.index] = v; p[row.key] = a; } else p[row.key] = v;
+        return JSON.stringify(p);
+    }
     property var penPoints: []
     property string tipText: ""
     function showTip(item, text) { tipText = text; }
@@ -209,6 +230,16 @@ ApplicationWindow {
         "zoom-actual": { on: () => canvas.loaded, run: () => canvas.zoomActual() },
         "toggle-layer": { on: () => win.activeLayer !== null, run: () => win.setLayer(win.activeLayer.id, { visible: !win.activeLayer.visible }) },
         "adjust-curves": { on: () => canvas.loaded, run: () => canvas.run("layer.newAdjustmentLayer.curves", '{"points":[[0,0],[64,40],[192,216],[255,255]]}') },
+        "adjust-levels": { on: () => canvas.loaded, run: () => canvas.run("layer.newAdjustmentLayer.levels", "{}") },
+        "adjust-hue-saturation": { on: () => canvas.loaded, run: () => canvas.run("layer.newAdjustmentLayer.hueSaturation", "{}") },
+        "adjust-brightness-contrast": { on: () => canvas.loaded, run: () => canvas.run("layer.newAdjustmentLayer.brightnessContrast", "{}") },
+        "adjust-vibrance": { on: () => canvas.loaded, run: () => canvas.run("layer.newAdjustmentLayer.vibrance", "{}") },
+        "adjust-exposure": { on: () => canvas.loaded, run: () => canvas.run("layer.newAdjustmentLayer.exposure", "{}") },
+        "adjust-color-balance": { on: () => canvas.loaded, run: () => canvas.run("layer.newAdjustmentLayer.colorBalance", "{}") },
+        "adjust-black-white": { on: () => canvas.loaded, run: () => canvas.run("layer.newAdjustmentLayer.blackWhite", "{}") },
+        "adjust-threshold": { on: () => canvas.loaded, run: () => canvas.run("layer.newAdjustmentLayer.threshold", "{}") },
+        "adjust-posterize": { on: () => canvas.loaded, run: () => canvas.run("layer.newAdjustmentLayer.posterize", "{}") },
+        "adjust-photo-filter": { on: () => canvas.loaded, run: () => canvas.run("layer.newAdjustmentLayer.photoFilter", "{}") },
         "adjust-invert": { on: () => canvas.loaded, run: () => canvas.run("layer.newAdjustmentLayer.invert", "{}") },
         "close": { on: () => true, run: () => Qt.quit() }
     })
@@ -371,7 +402,7 @@ ApplicationWindow {
         anchors { right: parent.right; top: optionsBar.bottom; bottom: footer.top }
         FiliDockGroup {
             Layout.fillWidth: true
-            Layout.preferredHeight: win.curvesShown || win.propertiesTab === 2 ? 440 : 200
+            Layout.preferredHeight: win.curvesShown || win.propertiesTab === 2 || win.adjustmentSliders.length > 3 ? 440 : win.adjustmentSliders.length > 0 ? 300 : 200
             tabs: [Fili.tr("Properties"), Fili.tr("Adjustments"), Fili.tr("Color")]
             currentIndex: win.propertiesTab
             onTabClicked: i => win.propertiesTab = i
@@ -426,6 +457,36 @@ ApplicationWindow {
                         FiliButton {
                             label: Fili.tr("Reset to defaults")
                             onClicked: canvas.run("layer.setAdjustment", JSON.stringify({ layer: win.activeLayer.id }))
+                        }
+                    }
+                    Column {
+                        visible: win.adjustmentSliders.length > 0
+                        width: parent.width
+                        spacing: FiliTheme.space2
+                        Repeater {
+                            model: win.adjustmentSliders
+                            Item {
+                                id: adjRow
+                                required property var modelData
+                                readonly property real current: { const v = win.adjustment.params[modelData.key]; return modelData.index !== undefined ? v[modelData.index] : v; }
+                                width: parent.width
+                                height: 30
+                                Text { id: adjLabel; anchors { left: parent.left; verticalCenter: parent.verticalCenter } width: 96; elide: Text.ElideRight; text: Fili.tr(modelData.label); font.family: FiliTheme.font; font.pixelSize: FiliTheme.size; color: FiliTheme.text }
+                                Text { id: adjValue; anchors { right: parent.right; verticalCenter: parent.verticalCenter } width: 48; horizontalAlignment: Text.AlignRight; text: Number(adjSlider.dragging ? adjSlider.shown : adjRow.current).toFixed(modelData.decimals ?? 0); font.family: FiliTheme.font; font.pixelSize: FiliTheme.size; color: FiliTheme.textSecondary }
+                                FiliSlider {
+                                    id: adjSlider
+                                    property real shown: adjRow.current
+                                    anchors { left: adjLabel.right; right: adjValue.left; leftMargin: FiliTheme.space2; rightMargin: FiliTheme.space2; verticalCenter: parent.verticalCenter }
+                                    Binding on value { when: !adjSlider.dragging; value: (adjRow.current - adjRow.modelData.min) / (adjRow.modelData.max - adjRow.modelData.min) }
+                                    onMoved: v => {
+                                        value = v;
+                                        const x = adjRow.modelData.min + v * (adjRow.modelData.max - adjRow.modelData.min);
+                                        shown = adjRow.modelData.decimals ? x : Math.round(x);
+                                        canvas.preview("layer.setAdjustment", win.adjustmentParams(adjRow.modelData, shown));
+                                    }
+                                    onReleased: { canvas.endPreview(); canvas.run("layer.setAdjustment", win.adjustmentParams(adjRow.modelData, shown)); }
+                                }
+                            }
                         }
                     }
                     Column {
@@ -489,6 +550,16 @@ ApplicationWindow {
             Column {
                 FiliSidebarRow { label: Fili.tr("Curves"); enabled: canvas.loaded; onClicked: win.runAction("adjust-curves") }
                 FiliSidebarRow { label: Fili.tr("Invert"); enabled: canvas.loaded; onClicked: win.runAction("adjust-invert") }
+                FiliSidebarRow { label: Fili.tr("Levels"); enabled: canvas.loaded; onClicked: win.runAction("adjust-levels") }
+                FiliSidebarRow { label: Fili.tr("Hue/Saturation"); enabled: canvas.loaded; onClicked: win.runAction("adjust-hue-saturation") }
+                FiliSidebarRow { label: Fili.tr("Brightness/Contrast"); enabled: canvas.loaded; onClicked: win.runAction("adjust-brightness-contrast") }
+                FiliSidebarRow { label: Fili.tr("Vibrance"); enabled: canvas.loaded; onClicked: win.runAction("adjust-vibrance") }
+                FiliSidebarRow { label: Fili.tr("Exposure"); enabled: canvas.loaded; onClicked: win.runAction("adjust-exposure") }
+                FiliSidebarRow { label: Fili.tr("Color Balance"); enabled: canvas.loaded; onClicked: win.runAction("adjust-color-balance") }
+                FiliSidebarRow { label: Fili.tr("Black & White"); enabled: canvas.loaded; onClicked: win.runAction("adjust-black-white") }
+                FiliSidebarRow { label: Fili.tr("Threshold"); enabled: canvas.loaded; onClicked: win.runAction("adjust-threshold") }
+                FiliSidebarRow { label: Fili.tr("Posterize"); enabled: canvas.loaded; onClicked: win.runAction("adjust-posterize") }
+                FiliSidebarRow { label: Fili.tr("Photo Filter"); enabled: canvas.loaded; onClicked: win.runAction("adjust-photo-filter") }
             }
             Flickable {
                 id: colorView

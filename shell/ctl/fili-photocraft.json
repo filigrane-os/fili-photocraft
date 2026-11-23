@@ -229,6 +229,46 @@
       "label": "New Curves Adjustment"
     },
     {
+      "name": "adjust-levels",
+      "label": "Levels"
+    },
+    {
+      "name": "adjust-hue-saturation",
+      "label": "Hue/Saturation"
+    },
+    {
+      "name": "adjust-brightness-contrast",
+      "label": "Brightness/Contrast"
+    },
+    {
+      "name": "adjust-vibrance",
+      "label": "Vibrance"
+    },
+    {
+      "name": "adjust-exposure",
+      "label": "Exposure"
+    },
+    {
+      "name": "adjust-color-balance",
+      "label": "Color Balance"
+    },
+    {
+      "name": "adjust-black-white",
+      "label": "Black & White"
+    },
+    {
+      "name": "adjust-threshold",
+      "label": "Threshold"
+    },
+    {
+      "name": "adjust-posterize",
+      "label": "Posterize"
+    },
+    {
+      "name": "adjust-photo-filter",
+      "label": "Photo Filter"
+    },
+    {
       "name": "adjust-invert",
       "label": "New Invert Adjustment"
     },

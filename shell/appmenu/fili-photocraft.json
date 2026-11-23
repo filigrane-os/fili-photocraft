@@ -70,6 +70,46 @@
           "exec": "fili-photocraft ctl --pid %pid action adjust-curves"
         },
         {
+          "label": "Levels",
+          "exec": "fili-photocraft ctl --pid %pid action adjust-levels"
+        },
+        {
+          "label": "Hue/Saturation",
+          "exec": "fili-photocraft ctl --pid %pid action adjust-hue-saturation"
+        },
+        {
+          "label": "Brightness/Contrast",
+          "exec": "fili-photocraft ctl --pid %pid action adjust-brightness-contrast"
+        },
+        {
+          "label": "Vibrance",
+          "exec": "fili-photocraft ctl --pid %pid action adjust-vibrance"
+        },
+        {
+          "label": "Exposure",
+          "exec": "fili-photocraft ctl --pid %pid action adjust-exposure"
+        },
+        {
+          "label": "Color Balance",
+          "exec": "fili-photocraft ctl --pid %pid action adjust-color-balance"
+        },
+        {
+          "label": "Black & White",
+          "exec": "fili-photocraft ctl --pid %pid action adjust-black-white"
+        },
+        {
+          "label": "Threshold",
+          "exec": "fili-photocraft ctl --pid %pid action adjust-threshold"
+        },
+        {
+          "label": "Posterize",
+          "exec": "fili-photocraft ctl --pid %pid action adjust-posterize"
+        },
+        {
+          "label": "Photo Filter",
+          "exec": "fili-photocraft ctl --pid %pid action adjust-photo-filter"
+        },
+        {
           "label": "New Invert Adjustment",
           "exec": "fili-photocraft ctl --pid %pid action adjust-invert"
         }

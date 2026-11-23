@@ -269,6 +269,12 @@ pub fn probe(file: &str) -> i32 {
         }
     }
     println!("tool commands accepted: {tools_ok}");
+    for kind in ["levels", "hueSaturation", "brightnessContrast", "vibrance", "exposure", "colorBalance", "blackWhite", "threshold", "posterize", "photoFilter"] {
+        match doc.execute(&format!("layer.newAdjustmentLayer.{kind}"), json!({})) {
+            Ok(()) => println!("default {kind}: {}", doc.detail()["layers"][0]["adjustment"]),
+            Err(e) => println!("{kind}: {e}"),
+        }
+    }
     println!("history: {} applied {}", doc.history().0, doc.history().1);
     doc.undo();
     doc.undo();
