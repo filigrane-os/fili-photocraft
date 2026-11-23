@@ -44,6 +44,16 @@
       "keys": "Ctrl+Shift+Z"
     },
     {
+      "name": "tool-hand",
+      "label": "Hand",
+      "keys": "H"
+    },
+    {
+      "name": "tool-zoom",
+      "label": "Zoom",
+      "keys": "Z"
+    },
+    {
       "name": "zoom-in",
       "label": "Zoom In",
       "keys": "Ctrl+="

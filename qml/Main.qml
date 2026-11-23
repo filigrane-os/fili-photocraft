@@ -3,6 +3,7 @@
 import QtQuick
 import QtQuick.Controls.Basic
 import QtQuick.Dialogs
+import QtQuick.Layouts
 import Fili.Photocraft
 import Fili.UI
 
@@ -24,6 +25,12 @@ ApplicationWindow {
     readonly property var layerList: { try { return JSON.parse(canvas.layers) || []; } catch (e) { return []; } }
     readonly property var activeLayer: layerList.find(l => l.selected) ?? null
 
+    // The tool in hand (the tool strip), and the label of what the pointer rests on (FiliToolStrip asks the window to draw it)
+    property string tool: "hand"
+    property int propertiesTab: 0
+    property string tipText: ""
+    function showTip(item, text) { tipText = text; }
+    function hideTip(item) { tipText = ""; }
     function setLayer(id, props) { canvas.run("layer.setProps", JSON.stringify(Object.assign({ layer: id }, props))); }
     function zoomStep(factor) { canvas.zoomAt(factor, canvas.width / 2, canvas.height / 2); }
 
@@ -46,6 +53,8 @@ ApplicationWindow {
         "open": { on: () => true, run: arg => arg ? canvas.open(arg) : openDialog.open() },
         "undo": { on: () => canvas.canUndo, run: () => canvas.undo() },
         "redo": { on: () => canvas.canRedo, run: () => canvas.redo() },
+        "tool-hand": { on: () => true, run: () => win.tool = "hand" },
+        "tool-zoom": { on: () => true, run: () => win.tool = "zoom" },
         "zoom-in": { on: () => canvas.loaded, run: () => win.zoomStep(1.25) },
         "zoom-out": { on: () => canvas.loaded, run: () => win.zoomStep(0.8) },
         "zoom-fit": { on: () => canvas.loaded, run: () => canvas.zoomFit() },
@@ -66,7 +75,7 @@ ApplicationWindow {
     }
     function stateJson() {
         return {
-            loaded: canvas.loaded, name: canvas.title, info: canvas.info, zoom: canvas.zoom, canUndo: canvas.canUndo, canRedo: canvas.canRedo,
+            tool: tool, loaded: canvas.loaded, name: canvas.title, info: canvas.info, zoom: canvas.zoom, canUndo: canvas.canUndo, canRedo: canvas.canRedo,
             layers: layerList.length, activeLayer: activeLayer ? activeLayer.name : "", error: canvas.error
         };
     }
@@ -97,30 +106,113 @@ ApplicationWindow {
     Shortcut { sequence: "Ctrl+="; onActivated: win.runAction("zoom-in") }
     Shortcut { sequence: "Ctrl++"; onActivated: win.runAction("zoom-in") }
     Shortcut { sequence: "Ctrl+-"; onActivated: win.runAction("zoom-out") }
+    Shortcut { sequence: "H"; onActivated: win.runAction("tool-hand") }
+    Shortcut { sequence: "Z"; onActivated: win.runAction("tool-zoom") }
 
-    FiliHeader {
-        id: header
+    // The layout of PhotoCraft: options bar on top, the tools on the left, the canvas with the tab of its document, the dock of
+    // panels on the right and the status bar. The menu is in the fili-bar (no menu bar here); there is no sidebar or header.
+    FiliOptionsBar {
+        id: optionsBar
         anchors { left: parent.left; right: parent.right; top: parent.top }
-        title: canvas.title !== "" ? canvas.title : "PhotoCraft"
         closeButton: true
-        onCloseRequested: Qt.quit()
-        FiliButton { label: Fili.tr("Open…"); onClicked: openDialog.open() }
-        FiliButton { label: Fili.tr("Fit"); enabledState: canvas.loaded; onClicked: canvas.zoomFit() }
-        FiliButton { label: "100 %"; enabledState: canvas.loaded; onClicked: canvas.zoomActual() }
-        FiliButton { label: Fili.tr("Undo"); enabledState: canvas.canUndo; onClicked: canvas.undo() }
-        FiliButton { label: Fili.tr("Redo"); enabledState: canvas.canRedo; onClicked: canvas.redo() }
+        onCloseRequested: win.runAction("close")
+        Text {
+            text: win.tool === "zoom" ? Fili.tr("Click to zoom in, Alt+click to zoom out") : Fili.tr("Drag to move the image")
+            font.family: FiliTheme.font
+            font.pixelSize: FiliTheme.size
+            color: FiliTheme.textSecondary
+        }
+        FiliButton { label: Fili.tr("Fit Screen"); enabledState: canvas.loaded; onClicked: win.runAction("zoom-fit") }
+        FiliButton { label: "100 %"; enabledState: canvas.loaded; onClicked: win.runAction("zoom-actual") }
     }
 
-    FiliSidebar {
-        id: sidebar
-        anchors { left: parent.left; top: header.bottom; bottom: footer.top }
-        FiliSidebarSection {
-            title: Fili.tr("Layers")
-            Repeater {
+    FiliToolStrip {
+        id: toolStrip
+        anchors { left: parent.left; top: optionsBar.bottom; bottom: footer.top }
+        current: win.tool
+        onPicked: id => win.runAction("tool-" + id)
+        swatches: false
+        model: [
+            { id: "hand", icon: "hand", tip: Fili.tr("Hand"), hint: "H" },
+            { id: "zoom", icon: "zoom-in", tip: Fili.tr("Zoom"), hint: "Z" }
+        ]
+    }
+
+    FiliDock {
+        id: dock
+        anchors { right: parent.right; top: optionsBar.bottom; bottom: footer.top }
+        FiliDockGroup {
+            Layout.fillWidth: true
+            Layout.preferredHeight: 200
+            tabs: [Fili.tr("Properties"), Fili.tr("Adjustments")]
+            currentIndex: win.propertiesTab
+            onTabClicked: i => win.propertiesTab = i
+            Item {
+                Column {
+                    anchors { left: parent.left; right: parent.right; top: parent.top; margins: FiliTheme.space3 }
+                    spacing: FiliTheme.space3
+                    Text {
+                        width: parent.width
+                        text: win.activeLayer ? win.activeLayer.name : Fili.tr("No layer selected")
+                        elide: Text.ElideRight
+                        font.family: FiliTheme.font
+                        font.pixelSize: FiliTheme.size
+                        font.weight: FiliTheme.weightAccent
+                        color: win.activeLayer ? FiliTheme.text : FiliTheme.textSecondary
+                    }
+                    Item {
+                        visible: win.activeLayer !== null
+                        width: parent.width
+                        height: opacity.implicitHeight
+                        Text {
+                            id: opacityLabel
+                            anchors { left: parent.left; verticalCenter: parent.verticalCenter }
+                            text: Fili.tr("Opacity")
+                            font.family: FiliTheme.font
+                            font.pixelSize: FiliTheme.size
+                            color: FiliTheme.text
+                        }
+                        Text {
+                            id: opacityValue
+                            anchors { right: parent.right; verticalCenter: parent.verticalCenter }
+                            width: opacityMetrics.advanceWidth
+                            horizontalAlignment: Text.AlignRight
+                            text: Math.round(opacity.value * 100) + " %"
+                            font.family: FiliTheme.font
+                            font.pixelSize: FiliTheme.size
+                            color: FiliTheme.textSecondary
+                            TextMetrics { id: opacityMetrics; font: opacityValue.font; text: "100 %" }
+                        }
+                        FiliSlider {
+                            id: opacity
+                            anchors { left: opacityLabel.right; right: opacityValue.left; leftMargin: FiliTheme.space3; rightMargin: FiliTheme.space3; verticalCenter: parent.verticalCenter }
+                            // Follows the layer, except while the thumb is held
+                            Binding on value { when: !opacity.dragging; value: win.activeLayer ? win.activeLayer.opacity : 1 }
+                            onMoved: v => value = v
+                            onReleased: if (win.activeLayer) win.setLayer(win.activeLayer.id, { opacity: value })
+                        }
+                    }
+                }
+            }
+            Column {
+                FiliSidebarRow { label: Fili.tr("Curves"); enabled: canvas.loaded; onClicked: win.runAction("adjust-curves") }
+                FiliSidebarRow { label: Fili.tr("Invert"); enabled: canvas.loaded; onClicked: win.runAction("adjust-invert") }
+            }
+        }
+        FiliDockGroup {
+            Layout.fillWidth: true
+            Layout.fillHeight: true
+            tabs: [Fili.tr("Layers")]
+            ListView {
+                id: layersView
+                clip: true
                 model: win.layerList
-                FiliLayerRow {
+                KineticScroll {}
+                delegate: FiliLayerRow {
                     required property var modelData
+                    width: layersView.width
                     label: modelData.name
+                    subtitle: modelData.kind
                     depth: modelData.depth
                     detail: modelData.opacity < 1 ? Math.round(modelData.opacity * 100) + " %" : ""
                     selected: modelData.selected
@@ -128,47 +220,23 @@ ApplicationWindow {
                     onClicked: canvas.run("layer.select", JSON.stringify({ layer: modelData.id }))
                     onVisibilityToggled: shown => win.setLayer(modelData.id, { visible: shown })
                 }
-            }
-            Item {
-                visible: win.activeLayer !== null
-                width: parent.width
-                height: FiliTheme.sideRowHeight + FiliTheme.space2
-                Text {
-                    id: opacityValue
-                    anchors { right: parent.right; rightMargin: FiliTheme.margin; verticalCenter: parent.verticalCenter }
-                    width: opacityMetrics.advanceWidth
-                    horizontalAlignment: Text.AlignRight
-                    text: Math.round(opacity.value * 100) + " %"
-                    font.family: FiliTheme.font
-                    font.pixelSize: FiliTheme.sizeSmall
-                    color: FiliTheme.textSecondary
-                    TextMetrics { id: opacityMetrics; font: opacityValue.font; text: "100 %" }
-                }
-                FiliSlider {
-                    id: opacity
-                    anchors { left: parent.left; right: opacityValue.left; leftMargin: FiliTheme.margin; rightMargin: FiliTheme.space2; verticalCenter: parent.verticalCenter }
-                    // Follows the layer, except while the thumb is held
-                    Binding on value { when: !opacity.dragging; value: win.activeLayer ? win.activeLayer.opacity : 1 }
-                    onMoved: v => value = v
-                    onReleased: if (win.activeLayer) win.setLayer(win.activeLayer.id, { opacity: value })
-                }
-            }
-        }
-        FiliSidebarSection {
-            title: Fili.tr("Adjustments")
-            FiliSidebarRow {
-                label: Fili.tr("Contrast curve")
-                onClicked: canvas.run("layer.newAdjustmentLayer.curves", '{"points":[[0,0],[64,40],[192,216],[255,255]]}')
-            }
-            FiliSidebarRow {
-                label: Fili.tr("Invert")
-                onClicked: canvas.run("layer.newAdjustmentLayer.invert", "{}")
+                FiliScrollBar { flick: layersView; anchors { top: parent.top; bottom: parent.bottom; right: parent.right } }
             }
         }
     }
 
+    // Tab of the document over the canvas
+    FiliTabBar {
+        id: documentTab
+        anchors { left: toolStrip.right; right: dock.left; top: optionsBar.bottom }
+        visible: canvas.loaded
+        height: visible ? implicitHeight : 0
+        closable: false
+        detachable: false
+        model: [canvas.title]
+    }
     Rectangle {
-        anchors { left: sidebar.right; right: parent.right; top: header.bottom; bottom: footer.top }
+        anchors { left: toolStrip.right; right: dock.left; top: documentTab.bottom; bottom: footer.top }
         color: FiliTheme.backgroundDeep
 
         PhotoCanvas {
@@ -185,22 +253,28 @@ ApplicationWindow {
                 if (f !== "") open(f);
             }
         }
-        // Drag to move the image, wheel to zoom at the pointer
+        // The Hand drags the image, the Zoom clicks into it (Alt: out); the wheel zooms at the pointer with either
         MouseArea {
             anchors.fill: parent
             enabled: canvas.loaded
             acceptedButtons: Qt.LeftButton | Qt.MiddleButton
-            cursorShape: pressed ? Qt.ClosedHandCursor : Qt.OpenHandCursor
+            cursorShape: win.tool === "zoom" ? Qt.CrossCursor : pressed ? Qt.ClosedHandCursor : Qt.OpenHandCursor
             property point last
             onPressed: e => last = Qt.point(e.x, e.y)
-            onPositionChanged: e => { canvas.panBy(e.x - last.x, e.y - last.y); last = Qt.point(e.x, e.y); }
-            onDoubleClicked: canvas.zoomFit()
+            onPositionChanged: e => {
+                if (win.tool === "hand" || pressedButtons & Qt.MiddleButton) {
+                    canvas.panBy(e.x - last.x, e.y - last.y);
+                    last = Qt.point(e.x, e.y);
+                }
+            }
+            onClicked: e => { if (win.tool === "zoom") canvas.zoomAt(e.modifiers & Qt.AltModifier ? 1 / 1.5 : 1.5, e.x, e.y); }
+            onDoubleClicked: if (win.tool === "hand") canvas.zoomFit()
             onWheel: e => canvas.zoomAt(Math.pow(1.0015, e.angleDelta.y), e.x, e.y)
         }
         Text {
             anchors.centerIn: parent
             visible: !canvas.loaded
-            text: Fili.tr("Drop an image here")
+            text: Fili.tr("Drop an image here, or press Ctrl+O")
             font.family: FiliTheme.font
             font.pixelSize: FiliTheme.sizeList
             color: FiliTheme.textSecondary
@@ -211,11 +285,12 @@ ApplicationWindow {
         }
     }
 
+    // Status bar of PhotoCraft: zoom, size, layers on the left; the label of the hovered tool or the render time on the right
     FiliFooter {
         id: footer
         anchors { left: parent.left; right: parent.right; bottom: parent.bottom }
         error: canvas.error !== ""
-        leftText: canvas.error !== "" ? canvas.error : (canvas.loaded ? canvas.info : Fili.tr("No image"))
-        rightText: canvas.loaded ? canvas.timing + " · " + Math.round(canvas.zoom * 100) + " %" : ""
+        leftText: canvas.error !== "" ? canvas.error : (canvas.loaded ? Math.round(canvas.zoom * 100) + " %   ·   " + canvas.info : Fili.tr("No image"))
+        rightText: win.tipText !== "" ? win.tipText : (canvas.loaded ? canvas.timing : "")
     }
 }

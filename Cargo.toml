@@ -10,7 +10,7 @@ build = "build.rs"
 cxx = "1.0.205"
 cxx-qt = "0.10.0"
 cxx-qt-lib = { version = "0.10.0", features = ["qt_gui", "qt_qml"] }
-# Back to a tag once FiliLayerRow is released
+# Back to a tag once fili-ui 0.4.0 is released (FiliLayerRow, FiliToolStrip, FiliDock)
 fili-ui = { path = "../fili-ui" }
 libc = "0.2.191"
 serde_json = "1"

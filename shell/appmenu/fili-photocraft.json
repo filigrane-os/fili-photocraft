@@ -1,40 +1,103 @@
 {
   "name": "PhotoCraft",
   "app": [
-    { "label": "About PhotoCraft", "exec": "fili-photocraft ctl --pid %pid action about" }
+    {
+      "label": "About PhotoCraft",
+      "exec": "fili-photocraft ctl --pid %pid action about"
+    }
   ],
   "menus": [
     {
       "label": "File",
       "children": [
-        { "label": "Open…", "keys": "Ctrl+O", "exec": "fili-photocraft ctl --pid %pid action open" },
-        { "sep": true },
-        { "label": "Close", "keys": "Ctrl+W", "exec": "fili-photocraft ctl --pid %pid action close" }
+        {
+          "label": "Open…",
+          "keys": "Ctrl+O",
+          "exec": "fili-photocraft ctl --pid %pid action open"
+        },
+        {
+          "sep": true
+        },
+        {
+          "label": "Close",
+          "keys": "Ctrl+W",
+          "exec": "fili-photocraft ctl --pid %pid action close"
+        }
       ]
     },
     {
       "label": "Edit",
       "children": [
-        { "label": "Undo", "keys": "Ctrl+Z", "exec": "fili-photocraft ctl --pid %pid action undo" },
-        { "label": "Redo", "keys": "Ctrl+Shift+Z", "exec": "fili-photocraft ctl --pid %pid action redo" }
+        {
+          "label": "Undo",
+          "keys": "Ctrl+Z",
+          "exec": "fili-photocraft ctl --pid %pid action undo"
+        },
+        {
+          "label": "Redo",
+          "keys": "Ctrl+Shift+Z",
+          "exec": "fili-photocraft ctl --pid %pid action redo"
+        }
       ]
     },
     {
       "label": "Layer",
       "children": [
-        { "label": "Show or Hide Layer", "exec": "fili-photocraft ctl --pid %pid action toggle-layer" },
-        { "sep": true },
-        { "label": "New Curves Adjustment", "exec": "fili-photocraft ctl --pid %pid action adjust-curves" },
-        { "label": "New Invert Adjustment", "exec": "fili-photocraft ctl --pid %pid action adjust-invert" }
+        {
+          "label": "Show or Hide Layer",
+          "exec": "fili-photocraft ctl --pid %pid action toggle-layer"
+        },
+        {
+          "sep": true
+        },
+        {
+          "label": "New Curves Adjustment",
+          "exec": "fili-photocraft ctl --pid %pid action adjust-curves"
+        },
+        {
+          "label": "New Invert Adjustment",
+          "exec": "fili-photocraft ctl --pid %pid action adjust-invert"
+        }
       ]
     },
     {
       "label": "View",
       "children": [
-        { "label": "Zoom In", "keys": "Ctrl+=", "exec": "fili-photocraft ctl --pid %pid action zoom-in" },
-        { "label": "Zoom Out", "keys": "Ctrl+-", "exec": "fili-photocraft ctl --pid %pid action zoom-out" },
-        { "label": "Fit on Screen", "keys": "Ctrl+0", "exec": "fili-photocraft ctl --pid %pid action zoom-fit" },
-        { "label": "Actual Size", "keys": "Ctrl+1", "exec": "fili-photocraft ctl --pid %pid action zoom-actual" }
+        {
+          "label": "Zoom In",
+          "keys": "Ctrl+=",
+          "exec": "fili-photocraft ctl --pid %pid action zoom-in"
+        },
+        {
+          "label": "Zoom Out",
+          "keys": "Ctrl+-",
+          "exec": "fili-photocraft ctl --pid %pid action zoom-out"
+        },
+        {
+          "label": "Fit on Screen",
+          "keys": "Ctrl+0",
+          "exec": "fili-photocraft ctl --pid %pid action zoom-fit"
+        },
+        {
+          "label": "Actual Size",
+          "keys": "Ctrl+1",
+          "exec": "fili-photocraft ctl --pid %pid action zoom-actual"
+        }
+      ]
+    },
+    {
+      "label": "Tools",
+      "children": [
+        {
+          "label": "Hand",
+          "keys": "H",
+          "exec": "fili-photocraft ctl --pid %pid action tool-hand"
+        },
+        {
+          "label": "Zoom",
+          "keys": "Z",
+          "exec": "fili-photocraft ctl --pid %pid action tool-zoom"
+        }
       ]
     }
   ]
