@@ -60,6 +60,8 @@ pub mod qobject {
         #[qproperty(bool, can_undo, cxx_name = "canUndo", READ, NOTIFY = changed)]
         #[qproperty(bool, can_redo, cxx_name = "canRedo", READ, NOTIFY = changed)]
         #[qproperty(f64, zoom, READ, NOTIFY = changed)]
+        // Changes with the zoom and the pan: what an overlay drawn over the image binds to
+        #[qproperty(QString, view_key, cxx_name = "viewKey", READ, NOTIFY = changed)]
         type PhotoCanvas = super::PhotoCanvasRust;
 
         #[qsignal]
@@ -91,6 +93,9 @@ pub mod qobject {
         #[qinvokable]
         #[cxx_name = "toDoc"]
         fn to_doc(self: &PhotoCanvas, x: f64, y: f64) -> QString;
+        #[qinvokable]
+        #[cxx_name = "toItem"]
+        fn to_item(self: &PhotoCanvas, x: f64, y: f64) -> QString;
         #[qinvokable]
         #[cxx_name = "zoomAt"]
         fn zoom_at(self: Pin<&mut PhotoCanvas>, factor: f64, x: f64, y: f64);
@@ -264,6 +269,7 @@ pub struct PhotoCanvasRust {
     can_undo: bool,
     can_redo: bool,
     zoom: f64,
+    view_key: QString,
 }
 
 impl cxx_qt::Initialize for qobject::PhotoCanvas {
@@ -315,7 +321,9 @@ impl qobject::PhotoCanvas {
     /// The view moved: the old frame is drawn at its new place at once, the sharp one follows
     fn view_changed(mut self: Pin<&mut Self>) {
         let zoom = self.view.zoom();
+        let key = format!("{zoom}:{:?}", self.view.to_doc(0.0, 0.0));
         self.as_mut().rust_mut().zoom = zoom;
+        self.as_mut().rust_mut().view_key = QString::from(&key);
         self.as_mut().changed();
         self.as_mut().update();
         self.schedule();
@@ -466,6 +474,11 @@ impl qobject::PhotoCanvas {
     pub fn viewport(mut self: Pin<&mut Self>, width: f64, height: f64, dpr: f64) {
         self.as_mut().rust_mut().view.set_item(width, height, dpr);
         self.view_changed();
+    }
+
+    pub fn to_item(&self, x: f64, y: f64) -> QString {
+        let (x, y) = self.view.to_item(x, y);
+        QString::from(&format!("[{x},{y}]"))
     }
 
     pub fn to_doc(&self, x: f64, y: f64) -> QString {

@@ -47,6 +47,13 @@ ApplicationWindow {
         if (tool === "eraser") p.erase = true; else p.color = brushColor;
         return JSON.stringify(p);
     }
+    // The rectangular selection in document pixels ({x, y, w, h}) and the one being dragged out (item coordinates), for the outline
+    property var marquee: null
+    property var drag: null
+    function itemRect(m) {
+        const a = JSON.parse(canvas.toItem(m.x, m.y)), b = JSON.parse(canvas.toItem(m.x + m.w, m.y + m.h));
+        return Qt.rect(a[0], a[1], b[0] - a[0], b[1] - a[1]);
+    }
     property string tipText: ""
     function showTip(item, text) { tipText = text; }
     function hideTip(item) { tipText = ""; }
@@ -72,11 +79,14 @@ ApplicationWindow {
     readonly property var actions: ({
         "about": { on: () => true, run: () => about.visible ? about.close() : about.show() },
         "open": { on: () => true, run: arg => arg ? canvas.open(arg) : openDialog.open() },
-        "undo": { on: () => canvas.canUndo, run: () => canvas.undo() },
-        "redo": { on: () => canvas.canRedo, run: () => canvas.redo() },
+        "undo": { on: () => canvas.canUndo, run: () => { canvas.undo(); win.marquee = null; } },
+        "redo": { on: () => canvas.canRedo, run: () => { canvas.redo(); win.marquee = null; } },
         "tool-hand": { on: () => true, run: () => win.tool = "hand" },
         "tool-brush": { on: () => true, run: () => win.tool = "brush" },
         "tool-eraser": { on: () => true, run: () => win.tool = "eraser" },
+        "tool-marquee": { on: () => true, run: () => win.tool = "marquee" },
+        "select-all": { on: () => canvas.loaded, run: () => { canvas.run("select.all", "{}"); win.marquee = null; } },
+        "deselect": { on: () => canvas.loaded, run: () => { canvas.run("select.deselect", "{}"); win.marquee = null; } },
         "tool-zoom": { on: () => true, run: () => win.tool = "zoom" },
         "zoom-in": { on: () => canvas.loaded, run: () => win.zoomStep(1.25) },
         "zoom-out": { on: () => canvas.loaded, run: () => win.zoomStep(0.8) },
@@ -130,6 +140,9 @@ ApplicationWindow {
     Shortcut { sequence: "Ctrl++"; onActivated: win.runAction("zoom-in") }
     Shortcut { sequence: "Ctrl+-"; onActivated: win.runAction("zoom-out") }
     Shortcut { sequence: "H"; onActivated: win.runAction("tool-hand") }
+    Shortcut { sequence: "M"; onActivated: win.runAction("tool-marquee") }
+    Shortcut { sequence: "Ctrl+A"; onActivated: win.runAction("select-all") }
+    Shortcut { sequence: "Ctrl+D"; onActivated: win.runAction("deselect") }
     Shortcut { sequence: "B"; onActivated: win.runAction("tool-brush") }
     Shortcut { sequence: "E"; onActivated: win.runAction("tool-eraser") }
     Shortcut { sequence: "Z"; onActivated: win.runAction("tool-zoom") }
@@ -178,6 +191,7 @@ ApplicationWindow {
         swatches: false
         model: [
             { id: "hand", icon: "hand", tip: Fili.tr("Hand"), hint: "H" },
+            { id: "marquee", icon: "square-dashed", tip: Fili.tr("Rectangular Marquee"), hint: "M" },
             { id: "brush", icon: "brush", tip: Fili.tr("Brush"), hint: "B" },
             { id: "eraser", icon: "eraser", tip: Fili.tr("Eraser"), hint: "E" },
             { id: "zoom", icon: "zoom-in", tip: Fili.tr("Zoom"), hint: "Z" }
@@ -377,9 +391,22 @@ ApplicationWindow {
             }
             onPressed: e => {
                 last = Qt.point(e.x, e.y);
+                if (win.tool === "marquee" && e.button === Qt.LeftButton) win.drag = Qt.rect(e.x, e.y, 0, 0);
                 if (win.painting && e.button === Qt.LeftButton && win.activeLayer) { win.stroke = []; addPoint(e); }
             }
             onReleased: e => {
+                if (win.drag) {
+                    const d = win.drag, a = JSON.parse(canvas.toDoc(d.x, d.y)), b = JSON.parse(canvas.toDoc(d.x + d.width, d.y + d.height));
+                    win.drag = null;
+                    const r = { x: Math.round(Math.min(a[0], b[0])), y: Math.round(Math.min(a[1], b[1])), w: Math.round(Math.abs(b[0] - a[0])), h: Math.round(Math.abs(b[1] - a[1])) };
+                    if (r.w > 0 && r.h > 0) {
+                        canvas.run("select.rect", JSON.stringify({ x: r.x, y: r.y, width: r.w, height: r.h }));
+                        win.marquee = r;
+                    } else {
+                        canvas.run("select.deselect", "{}");
+                        win.marquee = null;
+                    }
+                }
                 if (win.stroke.length > 0) {
                     canvas.endPreview();
                     canvas.run("paint.stroke", win.strokeParams());
@@ -387,6 +414,7 @@ ApplicationWindow {
                 }
             }
             onPositionChanged: e => {
+                if (win.drag) win.drag = Qt.rect(win.drag.x, win.drag.y, e.x - win.drag.x, e.y - win.drag.y);
                 if (win.stroke.length > 0 && pressedButtons & Qt.LeftButton) addPoint(e);
                 if (win.tool === "hand" || pressedButtons & Qt.MiddleButton) {
                     canvas.panBy(e.x - last.x, e.y - last.y);
@@ -396,6 +424,14 @@ ApplicationWindow {
             onClicked: e => { if (win.tool === "zoom") canvas.zoomAt(e.modifiers & Qt.AltModifier ? 1 / 1.5 : 1.5, e.x, e.y); }
             onDoubleClicked: if (win.tool === "hand") canvas.zoomFit()
             onWheel: e => canvas.zoomAt(Math.pow(1.0015, e.angleDelta.y), e.x, e.y)
+        }
+        // The outline of the selection (dashed, over the image) and of the rectangle being dragged
+        Rectangle {
+            readonly property var r: { canvas.viewKey; return win.drag ? Qt.rect(Math.min(win.drag.x, win.drag.x + win.drag.width), Math.min(win.drag.y, win.drag.y + win.drag.height), Math.abs(win.drag.width), Math.abs(win.drag.height)) : win.marquee ? win.itemRect(win.marquee) : null; }
+            visible: r !== null
+            x: r ? r.x : 0; y: r ? r.y : 0; width: r ? r.width : 0; height: r ? r.height : 0
+            color: "transparent"
+            border { width: 1; color: FiliTheme.accentColor }
         }
         Text {
             anchors.centerIn: parent
