@@ -220,5 +220,39 @@ pub fn probe(file: &str) -> i32 {
     let undone = doc.undo() && doc.undo() && doc.undo() && frame(&doc).0.pixels == before.pixels;
     println!("undo restores the pixels: {undone}");
     println!("layers: {layers}");
-    if changed && hidden && undone { 0 } else { 1 }
+    // The commands the tools of the window run, with the parameters it sends
+    let id = doc.detail()["layers"][0]["id"].clone();
+    let pts = json!([[20, 20], [60, 40], [90, 30]]);
+    let tools = [
+        ("paint.stroke", json!({"layer": id, "points": pts, "size": 12, "hardness": 0.8, "color": "#ff0000"})),
+        ("paint.pencil", json!({"layer": id, "points": pts, "size": 4, "hardness": 0.8, "color": "#00ff00"})),
+        ("paint.blur", json!({"layer": id, "points": pts, "size": 20, "hardness": 0.8})),
+        ("paint.sharpen", json!({"layer": id, "points": pts, "size": 20, "hardness": 0.8})),
+        ("paint.smudge", json!({"layer": id, "points": pts, "size": 20, "hardness": 0.8})),
+        ("paint.dodge", json!({"layer": id, "points": pts, "size": 20, "hardness": 0.8})),
+        ("paint.burn", json!({"layer": id, "points": pts, "size": 20, "hardness": 0.8})),
+        ("paint.sponge", json!({"layer": id, "points": pts, "size": 20, "hardness": 0.8})),
+        ("paint.spotHealing", json!({"layer": id, "points": pts, "size": 20, "hardness": 0.8})),
+        ("paint.historyBrush", json!({"layer": id, "points": pts, "size": 20, "hardness": 0.8})),
+        ("paint.cloneStamp", json!({"layer": id, "points": pts, "size": 20, "hardness": 0.8, "source": [100, 100], "offset": [30, 30]})),
+        ("paint.bucket", json!({"x": 10, "y": 10, "tolerance": 32, "color": "#0000ff"})),
+        ("paint.gradient", json!({"from": [0, 0], "to": [100, 100], "colors": ["#ff0000", "#ffffff"]})),
+        ("shape.create", json!({"kind": "star", "rect": [10, 10, 80, 80], "fill": "#e0605a"})),
+        ("shape.create", json!({"kind": "line", "from": [0, 0], "to": [90, 90], "weight": 4, "stroke": {"color": "#000000", "width": 4}, "fill": null})),
+        ("type.create", json!({"x": 20, "y": 60, "text": "Hi", "size": 24, "color": "#ffffff"})),
+        ("layer.translate", json!({"dx": 5, "dy": 3})),
+        ("select.magicWand", json!({"x": 10, "y": 10, "tolerance": 32, "mode": "replace"})),
+        ("select.lasso", json!({"points": pts})),
+        ("select.rect", json!({"x": 5, "y": 5, "width": 50, "height": 40, "ellipse": true})),
+        ("image.crop", json!({"x": 0, "y": 0, "width": 100, "height": 80})),
+    ];
+    let mut tools_ok = true;
+    for (command, params) in tools {
+        if let Err(e) = doc.execute(command, params) {
+            println!("{command}: {e}");
+            tools_ok = false;
+        }
+    }
+    println!("tool commands accepted: {tools_ok}");
+    if changed && hidden && undone && tools_ok { 0 } else { 1 }
 }
