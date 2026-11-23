@@ -3,6 +3,13 @@
 The image editor of Filigrane: a Qt Quick window (the `Fili.UI` kit) on the [PhotoCraft](https://github.com/storytold/photocraft)
 engine. The layout is PhotoCraft's (options bar, tools, document tab, panels, status bar); the menu lives in the fili-bar.
 
+## Tools and panels
+
+Move, marquees (rectangle, ellipse), lasso, magic wand, crop, eyedropper, brush, pencil, clone stamp, history brush, spot healing,
+gradient, paint bucket, pen, text, shapes, eraser, blur, sharpen, smudge, dodge, burn, sponge, hand, zoom (a key or a click on the
+tool in hand goes to the next of its group). Panels: Properties (opacity, blend mode, locks, adjustment sliders, curves with histogram),
+Adjustments, Color, Navigator, Layers (thumbnails), Channels, Paths, History, and a Debug log (Ctrl+Shift+L).
+
 ## Development
 
 A release build takes minutes (link-time optimisation over the whole engine). To iterate:
