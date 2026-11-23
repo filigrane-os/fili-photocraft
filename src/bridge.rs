@@ -246,6 +246,10 @@ pub struct PhotoCanvasRust {
     // What the last request asked for: a repaint that changes nothing composites nothing
     last_request: Option<(u64, (i32, i32, i32, i32), u32, u32)>,
     previewing: bool,
+    // The rows of the layers list without their pictures, the picture files made so far (layer id → URL) and which run made them
+    rows: serde_json::Value,
+    thumbs: std::collections::HashMap<u64, String>,
+    thumb_run: u64,
     revision: u64,
     title: QString,
     info: QString,
@@ -326,12 +330,57 @@ impl qobject::PhotoCanvas {
             r.title = QString::from(detail["name"].as_str().unwrap_or(""));
             r.info = QString::from(&info);
             r.error = QString::from(&error.unwrap_or_default());
-            r.layers = QString::from(&layers.to_string());
+            r.rows = layers;
             r.loaded = !detail.as_object().is_none_or(|o| o.is_empty());
             r.can_undo = detail["canUndo"].as_bool().unwrap_or(false);
             r.can_redo = detail["canRedo"].as_bool().unwrap_or(false);
         }
+        self.as_mut().publish_layers();
+        self.as_mut().make_thumbnails();
         self.view_changed();
+    }
+
+    /// The rows of the list with the pictures known so far
+    fn publish_layers(mut self: Pin<&mut Self>) {
+        let mut rows = self.rows.clone();
+        for row in rows.as_array_mut().into_iter().flatten() {
+            if let Some(url) = row["id"].as_u64().and_then(|id| self.thumbs.get(&id)) {
+                row["thumbnail"] = serde_json::Value::String(url.clone());
+            }
+        }
+        self.as_mut().rust_mut().layers = QString::from(&rows.to_string());
+    }
+
+    /// Draws the pictures of the layers on another thread (the previous run is dropped when it is no longer the latest)
+    fn make_thumbnails(mut self: Pin<&mut Self>) {
+        let Some(doc) = self.doc.snapshot() else { return };
+        let run = self.thumb_run + 1;
+        self.as_mut().rust_mut().thumb_run = run;
+        let qt = self.qt_thread();
+        std::thread::spawn(move || {
+            let dir = state_dir().join("fili-photocraft").join("thumbnails");
+            let _ = std::fs::create_dir_all(&dir);
+            // Pictures of earlier runs: the ones still shown stay readable until the new list replaces them (older than a minute go)
+            for old in std::fs::read_dir(&dir).into_iter().flatten().flatten() {
+                if old.metadata().and_then(|m| m.modified()).ok().and_then(|t| t.elapsed().ok()).is_some_and(|age| age.as_secs() > 60) {
+                    let _ = std::fs::remove_file(old.path());
+                }
+            }
+            let mut made = std::collections::HashMap::new();
+            for (id, w, h, pixels) in crate::document::layer_thumbnails(&doc, 64) {
+                let path = dir.join(format!("{id}-{run}.bmp"));
+                if std::fs::write(&path, crate::document::bmp(w, h, &pixels)).is_ok() {
+                    made.insert(id, format!("file://{}", path.display()));
+                }
+            }
+            let _ = qt.queue(move |mut canvas| {
+                if canvas.thumb_run == run {
+                    canvas.as_mut().rust_mut().thumbs = made;
+                    canvas.as_mut().publish_layers();
+                    canvas.changed();
+                }
+            });
+        });
     }
 
     pub fn open(mut self: Pin<&mut Self>, path: &QString) {

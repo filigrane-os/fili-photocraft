@@ -52,6 +52,72 @@ impl Document {
     }
 }
 
+/// A small picture of each layer drawn alone (groups and adjustment layers have none): `(id, width, height, RGBA8)`, at most `side` pixels
+/// on the longer side. Runs on the thread of the caller, which is not the one of the window.
+pub fn layer_thumbnails(doc: &EngineDocument, side: u32) -> Vec<(u64, u32, u32, Vec<u8>)> {
+    fn walk(doc: &EngineDocument, layers: &[photocraft_engine::doc::Layer], side: u32, out: &mut Vec<(u64, u32, u32, Vec<u8>)>) {
+        for layer in layers {
+            if let Some(children) = layer.children() {
+                walk(doc, children, side, out);
+            } else if layer.surface().is_some() {
+                let full = photocraft_compose::render_layer(layer, doc.bounds()).to_rgba8();
+                if full.width == 0 || full.height == 0 {
+                    continue;
+                }
+                let scale = (side as f32 / full.width.max(full.height) as f32).min(1.0);
+                let (w, h) = (((full.width as f32 * scale).round() as u32).max(1), ((full.height as f32 * scale).round() as u32).max(1));
+                // Box average: every source pixel lands in exactly one cell
+                let mut sum = vec![[0u32; 5]; (w * h) as usize];
+                for y in 0..full.height {
+                    let cy = (y as u64 * h as u64 / full.height as u64) as usize;
+                    for x in 0..full.width {
+                        let cx = (x as u64 * w as u64 / full.width as u64) as usize;
+                        let i = (y * full.width + x) as usize * 4;
+                        let a = full.pixels[i + 3] as u32;
+                        let cell = &mut sum[cy * w as usize + cx];
+                        for c in 0..3 {
+                            cell[c] += full.pixels[i + c] as u32 * a;
+                        }
+                        cell[3] += a;
+                        cell[4] += 1;
+                    }
+                }
+                let mut pixels = Vec::with_capacity((w * h * 4) as usize);
+                for cell in sum {
+                    let a = cell[3].max(1);
+                    pixels.extend([(cell[0] / a) as u8, (cell[1] / a) as u8, (cell[2] / a) as u8, (cell[3] / cell[4].max(1)) as u8]);
+                }
+                out.push((layer.id.0 as u64, w, h, pixels));
+            }
+        }
+    }
+    let mut out = Vec::new();
+    walk(doc, &doc.layers, side, &mut out);
+    out
+}
+
+/// A 32-bit BMP (Qt reads it with its alpha): lets QML show a picture from a file without an image provider
+pub fn bmp(w: u32, h: u32, rgba: &[u8]) -> Vec<u8> {
+    let size = 54 + rgba.len() as u32;
+    let mut out = Vec::with_capacity(size as usize);
+    out.extend(b"BM");
+    out.extend(size.to_le_bytes());
+    out.extend([0, 0, 0, 0]);
+    out.extend(54u32.to_le_bytes());
+    out.extend(40u32.to_le_bytes());
+    out.extend(w.to_le_bytes());
+    out.extend((-(h as i32)).to_le_bytes()); // top-down
+    out.extend(1u16.to_le_bytes());
+    out.extend(32u16.to_le_bytes());
+    out.extend([0u8; 4]); // BI_RGB
+    out.extend((rgba.len() as u32).to_le_bytes());
+    out.extend([0u8; 16]);
+    for p in rgba.chunks_exact(4) {
+        out.extend([p[2], p[1], p[0], p[3]]);
+    }
+    out
+}
+
 /// The layer tree as a flat list, top first, each row with its depth
 pub fn flat_layers(layers: &Value) -> Value {
     fn walk(nodes: &Value, depth: u32, out: &mut Vec<Value>) {
@@ -62,6 +128,7 @@ pub fn flat_layers(layers: &Value) -> Value {
                 "kind": node["kind"],
                 "visible": node["visible"],
                 "opacity": node["opacity"],
+                "blend": node["blend"],
                 "selected": node["selected"],
                 "depth": depth,
                 // Kind and parameters of an adjustment layer (what `layer.setAdjustment` takes)

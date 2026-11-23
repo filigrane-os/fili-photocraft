@@ -39,6 +39,8 @@ ApplicationWindow {
     property string tipText: ""
     function showTip(item, text) { tipText = text; }
     function hideTip(item) { tipText = ""; }
+    // The blend modes of the layer menu, in Photoshop order (the engine reads the labels)
+    readonly property var blendModes: ["Normal", "Dissolve", "Darken", "Multiply", "Color Burn", "Linear Burn", "Darker Color", "Lighten", "Screen", "Color Dodge", "Linear Dodge (Add)", "Lighter Color", "Overlay", "Soft Light", "Hard Light", "Vivid Light", "Linear Light", "Pin Light", "Hard Mix", "Difference", "Exclusion", "Subtract", "Divide", "Hue", "Saturation", "Color", "Luminosity"].map(n => ({ label: Fili.tr(n), value: n }))
     function setLayer(id, props) { canvas.run("layer.setProps", JSON.stringify(Object.assign({ layer: id }, props))); }
     function zoomStep(factor) { canvas.zoomAt(factor, canvas.width / 2, canvas.height / 2); }
 
@@ -208,8 +210,17 @@ ApplicationWindow {
                             onClicked: canvas.run("layer.setAdjustment", JSON.stringify({ layer: win.activeLayer.id }))
                         }
                     }
-                    Item {
+                    Column {
                         visible: win.activeLayer !== null && !win.curvesShown
+                        width: parent.width
+                        spacing: FiliTheme.space3
+                        FiliSelect {
+                            width: parent.width
+                            model: win.blendModes
+                            current: win.activeLayer ? win.activeLayer.blend : "Normal"
+                            onPicked: v => win.activeLayer && win.setLayer(win.activeLayer.id, { blend: v })
+                        }
+                    Item {
                         width: parent.width
                         height: opacity.implicitHeight
                         Text {
@@ -240,6 +251,7 @@ ApplicationWindow {
                             onReleased: if (win.activeLayer) win.setLayer(win.activeLayer.id, { opacity: value })
                         }
                     }
+                    }
                 }
             }
             Column {
@@ -260,7 +272,8 @@ ApplicationWindow {
                     required property var modelData
                     width: layersView.width
                     label: modelData.name
-                    subtitle: modelData.kind
+                    subtitle: modelData.blend !== "Normal" && modelData.blend !== undefined ? modelData.kind + " · " + modelData.blend : modelData.kind
+                    thumbnail: modelData.thumbnail ?? ""
                     depth: modelData.depth
                     detail: modelData.opacity < 1 ? Math.round(modelData.opacity * 100) + " %" : ""
                     selected: modelData.selected
