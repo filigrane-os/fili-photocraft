@@ -37,14 +37,57 @@ ApplicationWindow {
     onCurvePointsChanged: curveSamples = JSON.parse(canvas.curveSamples(JSON.stringify(curvePoints)))
     readonly property var channelColors: ({ points: FiliTheme.text, red: "#e0605a", green: "#5cc06a", blue: "#5a8fe0" })
     // Brush and Eraser: the stroke being drawn (document points), its size, hardness and colour
-    readonly property bool painting: tool === "brush" || tool === "eraser"
+    // Every tool (icon, name, key) and the groups the strip shows: one button per group, a click on the tool in hand goes to the next one
+    readonly property var toolInfo: ({
+        hand: { icon: "hand", tip: "Hand", hint: "H" }, zoom: { icon: "zoom-in", tip: "Zoom", hint: "Z" },
+        marquee: { icon: "square-dashed", tip: "Rectangular Marquee", hint: "M" },
+        brush: { icon: "brush", tip: "Brush", hint: "B" }, pencil: { icon: "pencil", tip: "Pencil", hint: "B" },
+        eraser: { icon: "eraser", tip: "Eraser", hint: "E" },
+        blur: { icon: "droplet", tip: "Blur", hint: "R" }, sharpen: { icon: "triangle", tip: "Sharpen", hint: "R" }, smudge: { icon: "pointer", tip: "Smudge", hint: "R" },
+        dodge: { icon: "sun", tip: "Dodge", hint: "O" }, burn: { icon: "moon", tip: "Burn", hint: "O" }, sponge: { icon: "sponge", tip: "Sponge", hint: "O" },
+        heal: { icon: "bandage", tip: "Spot Healing Brush", hint: "J" }, history: { icon: "history", tip: "History Brush", hint: "Y" }, stamp: { icon: "stamp", tip: "Clone Stamp", hint: "S" }
+    })
+    readonly property var toolGroups: [
+        ["marquee"], ["brush", "pencil"], ["stamp", "history", "heal"], ["eraser"], ["blur", "sharpen", "smudge"], ["dodge", "burn", "sponge"], ["hand"], ["zoom"]
+    ]
+    property var groupPick: ({})
+    readonly property var toolModel: {
+        const out = [];
+        toolGroups.forEach((g, i) => {
+            const id = g.indexOf(tool) >= 0 ? tool : (groupPick[i] ?? g[0]);
+            const t = toolInfo[id];
+            if (i === 3 || i === 6) out.push({ sep: true });
+            out.push({ id: id, icon: t.icon, tip: Fili.tr(t.tip), hint: t.hint, variants: g.length > 1 });
+        });
+        return out;
+    }
+    function pickTool(id) {
+        const i = toolGroups.findIndex(g => g.indexOf(id) >= 0);
+        const g = toolGroups[i];
+        const next = id === tool && g.length > 1 ? g[(g.indexOf(id) + 1) % g.length] : id;
+        groupPick = Object.assign({}, groupPick, { [i]: next });
+        tool = next;
+    }
+    readonly property var toolKeys: ({ H: "hand", Z: "zoom", M: "marquee", B: "brush", E: "eraser", R: "blur", O: "dodge", J: "heal", Y: "history", S: "stamp" })
+    // The tools that draw a stroke: the command of the engine each one runs
+    readonly property var strokeTools: ({ brush: "paint.stroke", pencil: "paint.pencil", eraser: "paint.stroke", blur: "paint.blur", sharpen: "paint.sharpen",
+        smudge: "paint.smudge", dodge: "paint.dodge", burn: "paint.burn", sponge: "paint.sponge", heal: "paint.spotHealing", history: "paint.historyBrush", stamp: "paint.cloneStamp" })
+    readonly property bool painting: strokeTools[tool] !== undefined
+    readonly property bool usesColor: tool === "brush" || tool === "pencil"
+    // Clone Stamp: the point sampled with Alt+click and the offset it keeps to the strokes that follow (aligned)
+    property var stampSource: null
+    property var stampOffset: null
     property var stroke: []
     property real brushSize: 24
     property real brushHardness: 0.8
     property string brushColor: "#000000"
     function strokeParams() {
         const p = { layer: activeLayer ? activeLayer.id : 0, points: stroke, size: brushSize, hardness: brushHardness };
-        if (tool === "eraser") p.erase = true; else p.color = brushColor;
+        if (tool === "eraser") p.erase = true; else if (usesColor) p.color = brushColor;
+        if (tool === "stamp" && stampSource && stroke.length > 0) {
+            if (stampOffset === null) stampOffset = [stampSource[0] - stroke[0][0], stampSource[1] - stroke[0][1]];
+            p.offset = stampOffset;
+        }
         return JSON.stringify(p);
     }
     // The rectangular selection in document pixels ({x, y, w, h}) and the one being dragged out (item coordinates), for the outline
@@ -81,13 +124,8 @@ ApplicationWindow {
         "open": { on: () => true, run: arg => arg ? canvas.open(arg) : openDialog.open() },
         "undo": { on: () => canvas.canUndo, run: () => { canvas.undo(); win.marquee = null; } },
         "redo": { on: () => canvas.canRedo, run: () => { canvas.redo(); win.marquee = null; } },
-        "tool-hand": { on: () => true, run: () => win.tool = "hand" },
-        "tool-brush": { on: () => true, run: () => win.tool = "brush" },
-        "tool-eraser": { on: () => true, run: () => win.tool = "eraser" },
-        "tool-marquee": { on: () => true, run: () => win.tool = "marquee" },
         "select-all": { on: () => canvas.loaded, run: () => { canvas.run("select.all", "{}"); win.marquee = null; } },
         "deselect": { on: () => canvas.loaded, run: () => { canvas.run("select.deselect", "{}"); win.marquee = null; } },
-        "tool-zoom": { on: () => true, run: () => win.tool = "zoom" },
         "zoom-in": { on: () => canvas.loaded, run: () => win.zoomStep(1.25) },
         "zoom-out": { on: () => canvas.loaded, run: () => win.zoomStep(0.8) },
         "zoom-fit": { on: () => canvas.loaded, run: () => canvas.zoomFit() },
@@ -98,6 +136,7 @@ ApplicationWindow {
         "close": { on: () => true, run: () => Qt.quit() }
     })
     function runAction(name, arg) {
+        if (name.startsWith("tool-") && toolInfo[name.slice(5)] !== undefined) { tool = name.slice(5); return { ok: true, error: "" }; }
         const a = actions[name];
         if (!a)
             return { ok: false, error: "unknown action: " + name + " (fili-photocraft ctl actions lists them)" };
@@ -139,13 +178,12 @@ ApplicationWindow {
     Shortcut { sequence: "Ctrl+="; onActivated: win.runAction("zoom-in") }
     Shortcut { sequence: "Ctrl++"; onActivated: win.runAction("zoom-in") }
     Shortcut { sequence: "Ctrl+-"; onActivated: win.runAction("zoom-out") }
-    Shortcut { sequence: "H"; onActivated: win.runAction("tool-hand") }
-    Shortcut { sequence: "M"; onActivated: win.runAction("tool-marquee") }
+    Repeater {
+        model: Object.keys(win.toolKeys)
+        Item { required property string modelData; Shortcut { sequence: modelData; onActivated: { const id = win.toolKeys[modelData]; const g = win.toolGroups.find(g => g.indexOf(win.tool) >= 0); win.pickTool(g && g.indexOf(id) >= 0 ? win.tool : id); } } }
+    }
     Shortcut { sequence: "Ctrl+A"; onActivated: win.runAction("select-all") }
     Shortcut { sequence: "Ctrl+D"; onActivated: win.runAction("deselect") }
-    Shortcut { sequence: "B"; onActivated: win.runAction("tool-brush") }
-    Shortcut { sequence: "E"; onActivated: win.runAction("tool-eraser") }
-    Shortcut { sequence: "Z"; onActivated: win.runAction("tool-zoom") }
 
     // The layout of PhotoCraft: options bar on top, the tools on the left, the canvas with the tab of its document, the dock of
     // panels on the right and the status bar. The menu is in the fili-bar (no menu bar here); there is no sidebar or header.
@@ -169,7 +207,7 @@ ApplicationWindow {
             Text { anchors.verticalCenter: parent.verticalCenter; text: Fili.tr("Hardness") + " " + Math.round(win.brushHardness * 100) + " %"; font.family: FiliTheme.font; font.pixelSize: FiliTheme.size; color: FiliTheme.text }
             FiliSlider { width: 120; anchors.verticalCenter: parent.verticalCenter; value: win.brushHardness; onMoved: v => win.brushHardness = v }
             Repeater {
-                model: win.tool === "brush" ? ["#000000", "#ffffff", "#e0605a", "#5cc06a", "#5a8fe0", "#e8c547"] : []
+                model: win.usesColor ? ["#000000", "#ffffff", "#e0605a", "#5cc06a", "#5a8fe0", "#e8c547"] : []
                 Rectangle {
                     required property string modelData
                     anchors.verticalCenter: parent.verticalCenter
@@ -187,15 +225,9 @@ ApplicationWindow {
         id: toolStrip
         anchors { left: parent.left; top: optionsBar.bottom; bottom: footer.top }
         current: win.tool
-        onPicked: id => win.runAction("tool-" + id)
+        onPicked: id => win.pickTool(id)
         swatches: false
-        model: [
-            { id: "hand", icon: "hand", tip: Fili.tr("Hand"), hint: "H" },
-            { id: "marquee", icon: "square-dashed", tip: Fili.tr("Rectangular Marquee"), hint: "M" },
-            { id: "brush", icon: "brush", tip: Fili.tr("Brush"), hint: "B" },
-            { id: "eraser", icon: "eraser", tip: Fili.tr("Eraser"), hint: "E" },
-            { id: "zoom", icon: "zoom-in", tip: Fili.tr("Zoom"), hint: "Z" }
-        ]
+        model: win.toolModel
     }
 
     FiliDock {
@@ -387,12 +419,14 @@ ApplicationWindow {
             property point last
             function addPoint(e) {
                 win.stroke = win.stroke.concat([JSON.parse(canvas.toDoc(e.x, e.y))]);
-                canvas.preview("paint.stroke", win.strokeParams());
+                canvas.preview(win.strokeTools[win.tool], win.strokeParams());
             }
             onPressed: e => {
                 last = Qt.point(e.x, e.y);
                 if (win.tool === "marquee" && e.button === Qt.LeftButton) win.drag = Qt.rect(e.x, e.y, 0, 0);
-                if (win.painting && e.button === Qt.LeftButton && win.activeLayer) { win.stroke = []; addPoint(e); }
+                if (win.tool === "stamp" && e.button === Qt.LeftButton && e.modifiers & Qt.AltModifier) {
+                    win.stampSource = JSON.parse(canvas.toDoc(e.x, e.y)); win.stampOffset = null;
+                } else if (win.painting && e.button === Qt.LeftButton && win.activeLayer) { win.stroke = []; addPoint(e); }
             }
             onReleased: e => {
                 if (win.drag) {
@@ -409,7 +443,7 @@ ApplicationWindow {
                 }
                 if (win.stroke.length > 0) {
                     canvas.endPreview();
-                    canvas.run("paint.stroke", win.strokeParams());
+                    canvas.run(win.strokeTools[win.tool], win.strokeParams());
                     win.stroke = [];
                 }
             }
