@@ -201,6 +201,15 @@
       "keys": "Ctrl+D"
     },
     {
+      "name": "select-inverse",
+      "label": "Inverse",
+      "keys": "Ctrl+Shift+I"
+    },
+    {
+      "name": "select-sky",
+      "label": "Sky"
+    },
+    {
       "name": "zoom-in",
       "label": "Zoom In",
       "keys": "Ctrl+="

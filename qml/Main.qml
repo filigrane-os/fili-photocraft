@@ -224,6 +224,8 @@ ApplicationWindow {
         "tool-pen": { on: () => true, run: () => win.selectTool("pen") },
         "debug": { on: () => true, run: () => debug.open = !debug.open },
         "select-all": { on: () => canvas.loaded, run: () => { canvas.run("select.all", "{}")} },
+        "select-inverse": { on: () => canvas.loaded, run: () => canvas.run("select.inverse", "{}") },
+        "select-sky": { on: () => canvas.loaded, run: () => canvas.run("select.sky", "{}") },
         "deselect": { on: () => canvas.loaded, run: () => { canvas.run("select.deselect", "{}")} },
         "zoom-in": { on: () => canvas.loaded, run: () => win.zoomStep(1.25) },
         "zoom-out": { on: () => canvas.loaded, run: () => win.zoomStep(0.8) },
@@ -308,6 +310,7 @@ ApplicationWindow {
     Shortcut { sequence: "Escape"; enabled: win.penPoints.length > 0; onActivated: win.penPoints = [] }
     Shortcut { sequence: "P"; onActivated: win.keyTool("P") }
     Shortcut { sequence: "Ctrl+Shift+L"; onActivated: win.runAction("debug") }
+    Shortcut { sequence: "Ctrl+Shift+I"; onActivated: win.runAction("select-inverse") }
     Shortcut { sequence: "Ctrl+A"; onActivated: win.runAction("select-all") }
     Shortcut { sequence: "Ctrl+D"; onActivated: win.runAction("deselect") }
 

@@ -52,6 +52,15 @@
           "label": "Deselect",
           "keys": "Ctrl+D",
           "exec": "fili-photocraft ctl --pid %pid action deselect"
+        },
+        {
+          "label": "Inverse",
+          "keys": "Ctrl+Shift+I",
+          "exec": "fili-photocraft ctl --pid %pid action select-inverse"
+        },
+        {
+          "label": "Sky",
+          "exec": "fili-photocraft ctl --pid %pid action select-sky"
         }
       ]
     },
