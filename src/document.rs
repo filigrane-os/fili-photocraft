@@ -64,6 +64,8 @@ pub fn flat_layers(layers: &Value) -> Value {
                 "opacity": node["opacity"],
                 "selected": node["selected"],
                 "depth": depth,
+                // Kind and parameters of an adjustment layer (what `layer.setAdjustment` takes)
+                "adjustment": node.get("adjustment").cloned().unwrap_or(Value::Null),
             }));
             walk(&node["children"], depth + 1, out);
         }
@@ -102,9 +104,30 @@ pub fn probe(file: &str) -> i32 {
     println!("curve {} ms, pixels changed: {changed}", curved.ms);
     let layers = flat_layers(&doc.detail()["layers"]);
     let top = layers[0]["id"].clone();
+    // The Properties panel edits the points of the curve and a channel: the engine takes them and reports them back
+    let edited = json!([[0, 0], [128, 200], [255, 255]]);
+    if let Err(e) = doc.execute("layer.setAdjustment", json!({"layer": top, "points": edited, "red": [[0, 0], [100, 30], [255, 255]]})) {
+        eprintln!("setAdjustment: {e}");
+        return 1;
+    }
+    let params = doc.detail()["layers"][0]["adjustment"]["params"].clone();
+    // The engine reports levels as decimals (128.0), so the values are compared as numbers
+    let pair = |v: &Value| (v[0].as_f64().unwrap_or(-1.0), v[1].as_f64().unwrap_or(-1.0));
+    let readback = params["points"].as_array().map(|a| a.iter().map(pair).collect::<Vec<_>>()) == Some(vec![(0.0, 0.0), (128.0, 200.0), (255.0, 255.0)])
+        && pair(&params["red"][1]) == (100.0, 30.0);
+    if !readback {
+        eprintln!("params after the edit: {params}");
+    }
+    println!("setAdjustment keeps the points and the red channel: {readback}");
+    let (reedited, _) = frame(&doc);
+    let moved = reedited.pixels != curved.pixels;
+    println!("the new curve changes the pixels: {moved}");
+    if !(readback && moved) {
+        return 1;
+    }
     let hidden = doc.execute("layer.setProps", json!({"layer": top, "visible": false})).is_ok() && frame(&doc).0.pixels == before.pixels;
     println!("hiding the curve restores the pixels: {hidden}");
-    let undone = doc.undo() && doc.undo() && frame(&doc).0.pixels == before.pixels;
+    let undone = doc.undo() && doc.undo() && doc.undo() && frame(&doc).0.pixels == before.pixels;
     println!("undo restores the pixels: {undone}");
     println!("layers: {layers}");
     if changed && hidden && undone { 0 } else { 1 }

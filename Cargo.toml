@@ -29,6 +29,16 @@ lto = "thin"
 codegen-units = 16
 strip = true
 
+# `make dev`: the engine stays optimised (the editor is unusable otherwise) but there is no link-time optimisation, several code
+# generation units and incremental compilation, so a change of the application rebuilds in a fraction of the release time
+[profile.fast]
+inherits = "release"
+lto = false
+codegen-units = 16
+incremental = true
+strip = false
+debug = 0
+
 # PhotoCraft's own forks of these crates; a [patch] does not travel with a git dependency
 [patch.crates-io]
 krilla = { git = "https://github.com/storytold/craft-libs", rev = "8d436f486a2e890930ffdf10b602935feb492c97" }

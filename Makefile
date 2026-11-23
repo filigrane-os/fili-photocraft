@@ -1,6 +1,7 @@
 # fili-photocraft: build and check.
 #
 #   make          build the release binary
+#   make dev      build for development (no link-time optimisation), then `make run` (QML read from the source folders)
 #   make test     unit tests, the check of the bar menu and of the ctl catalog
 #   sudo make install          install under /usr/local (PREFIX=/usr for a system package)
 #   make install DESTDIR=pkg PREFIX=/usr      stage into a directory (packagers)
@@ -20,12 +21,23 @@ TARGET_DIR ?= $(if $(CARGO_TARGET_DIR),$(CARGO_TARGET_DIR),target)
 QMAKE ?= $(firstword $(wildcard /usr/lib/qt6/bin/qmake6 /usr/lib64/qt6/bin/qmake6) $(shell command -v qmake6 qmake-qt6 2>/dev/null))
 export QMAKE
 
-.PHONY: all build test install install-data uninstall
+.PHONY: all build dev run test install install-data uninstall
 
 all: build
 
 build:
 	$(CARGO) build --release
+
+# Development. `make dev` builds without link-time optimisation (target/fast); `make run` starts that build with the QML read from
+# the source folders (this one and ../fili-ui), so after a change of a .qml file just run it again, no build. `make run ARGS=image.jpg`.
+FILI_UI ?= ../fili-ui
+
+dev:
+	$(CARGO) build --profile fast
+
+run:
+	@test -x $(TARGET_DIR)/fast/fili-photocraft || { echo "run 'make dev' first" >&2; exit 1; }
+	FILI_QML_DIR=$(CURDIR)/qml FILI_UI_QML=$(abspath $(FILI_UI))/qml QT_QUICK_BACKEND=software $(TARGET_DIR)/fast/fili-photocraft $(ARGS)
 
 test:
 	$(CARGO) test --release

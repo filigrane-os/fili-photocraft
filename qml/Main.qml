@@ -28,6 +28,14 @@ ApplicationWindow {
     // The tool in hand (the tool strip), and the label of what the pointer rests on (FiliToolStrip asks the window to draw it)
     property string tool: "hand"
     property int propertiesTab: 0
+    // The Curves adjustment of the selected layer: its channel (the composite is "points"), the points and the curve to draw
+    property string curveChannel: "points"
+    readonly property var adjustment: activeLayer && activeLayer.adjustment ? activeLayer.adjustment : null
+    readonly property bool curvesShown: adjustment !== null && adjustment.kind === "curves" && adjustment.params.pencil !== true && adjustment.params.points !== undefined
+    readonly property var curvePoints: curvesShown ? (adjustment.params[curveChannel] ?? [[0, 0], [255, 255]]) : [[0, 0], [255, 255]]
+    property var curveSamples: []
+    onCurvePointsChanged: curveSamples = JSON.parse(canvas.curveSamples(JSON.stringify(curvePoints)))
+    readonly property var channelColors: ({ points: FiliTheme.text, red: "#e0605a", green: "#5cc06a", blue: "#5a8fe0" })
     property string tipText: ""
     function showTip(item, text) { tipText = text; }
     function hideTip(item) { tipText = ""; }
@@ -143,7 +151,7 @@ ApplicationWindow {
         anchors { right: parent.right; top: optionsBar.bottom; bottom: footer.top }
         FiliDockGroup {
             Layout.fillWidth: true
-            Layout.preferredHeight: 200
+            Layout.preferredHeight: win.curvesShown ? 440 : 200
             tabs: [Fili.tr("Properties"), Fili.tr("Adjustments")]
             currentIndex: win.propertiesTab
             onTabClicked: i => win.propertiesTab = i
@@ -160,8 +168,42 @@ ApplicationWindow {
                         font.weight: FiliTheme.weightAccent
                         color: win.activeLayer ? FiliTheme.text : FiliTheme.textSecondary
                     }
+                    // Curves: the channel, the graph, the point under the pointer, and a way back to the straight line
+                    Column {
+                        visible: win.curvesShown
+                        width: parent.width
+                        spacing: FiliTheme.space3
+                        FiliSelect {
+                            width: parent.width
+                            model: [{ label: Fili.tr("RGB"), value: "points" }, { label: Fili.tr("Red"), value: "red" }, { label: Fili.tr("Green"), value: "green" }, { label: Fili.tr("Blue"), value: "blue" }]
+                            current: win.curveChannel
+                            onPicked: v => win.curveChannel = v
+                        }
+                        FiliCurveEditor {
+                            id: curveEditor
+                            width: Math.min(parent.width, 260)
+                            height: width
+                            anchors.horizontalCenter: parent.horizontalCenter
+                            points: win.curvePoints
+                            samples: win.curveSamples
+                            curveColor: win.channelColors[win.curveChannel]
+                            onPointsMoved: p => win.curveSamples = JSON.parse(canvas.curveSamples(JSON.stringify(p)))
+                            onPointsCommitted: p => canvas.run("layer.setAdjustment", JSON.stringify(Object.assign({ layer: win.activeLayer.id }, { [win.curveChannel]: p })))
+                        }
+                        Text {
+                            width: parent.width
+                            text: curveEditor.selectedPoint ? Fili.tr("Input") + "  " + curveEditor.selectedPoint[0] + "     " + Fili.tr("Output") + "  " + curveEditor.selectedPoint[1] : " "
+                            font.family: FiliTheme.font
+                            font.pixelSize: FiliTheme.size
+                            color: FiliTheme.textSecondary
+                        }
+                        FiliButton {
+                            label: Fili.tr("Reset to defaults")
+                            onClicked: canvas.run("layer.setAdjustment", JSON.stringify({ layer: win.activeLayer.id }))
+                        }
+                    }
                     Item {
-                        visible: win.activeLayer !== null
+                        visible: win.activeLayer !== null && !win.curvesShown
                         width: parent.width
                         height: opacity.implicitHeight
                         Text {

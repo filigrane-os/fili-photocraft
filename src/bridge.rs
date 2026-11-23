@@ -69,6 +69,10 @@ pub mod qobject {
         // Runs a command of the engine: its id and its parameters as JSON
         #[qinvokable]
         fn run(self: Pin<&mut PhotoCanvas>, id: &QString, params: &QString);
+        // The curve of the engine through these points ([[input, output], …] 0..255): 129 outputs 0..1 at evenly spaced inputs, JSON
+        #[qinvokable]
+        #[cxx_name = "curveSamples"]
+        fn curve_samples(self: &PhotoCanvas, points: &QString) -> QString;
         #[qinvokable]
         fn undo(self: Pin<&mut PhotoCanvas>);
         #[qinvokable]
@@ -110,6 +114,7 @@ pub mod qobject {
 use std::{path::PathBuf, pin::Pin};
 
 use cxx_qt::{CxxQtType, Threading};
+use photocraft_engine::doc::adjust::CurvePoint;
 use cxx_qt_lib::{QColor, QImage, QImageFormat, QPainterRenderHint, QRect, QRectF, QString, c_void};
 
 use crate::{
@@ -341,6 +346,13 @@ impl qobject::PhotoCanvas {
             .map_err(|e| e.to_string())
             .and_then(|p| self.as_mut().rust_mut().doc.execute(&id.to_string(), p));
         self.refresh(result.err());
+    }
+
+    pub fn curve_samples(&self, points: &QString) -> QString {
+        let pairs: Vec<[f64; 2]> = serde_json::from_str(&points.to_string()).unwrap_or_default();
+        let points: Vec<CurvePoint> = pairs.iter().map(|p| CurvePoint { input: (p[0] / 255.0) as f32, output: (p[1] / 255.0) as f32 }).collect();
+        let samples = photocraft_compose::adjust::curve_samples::<129>(&points);
+        QString::from(&serde_json::to_string(&samples).unwrap_or_else(|_| "[]".into()))
     }
 
     pub fn undo(mut self: Pin<&mut Self>) {
