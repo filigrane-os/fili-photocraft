@@ -617,7 +617,7 @@ ApplicationWindow {
         id: documentTab
         anchors { left: toolStrip.right; right: dock.left; top: optionsBar.bottom }
         visible: canvas.loaded
-        height: canvas.loaded ? implicitHeight : 0
+        height: canvas.loaded ? 40 : 0
         closable: false
         detachable: false
         model: [canvas.title]
