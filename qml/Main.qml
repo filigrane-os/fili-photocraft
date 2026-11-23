@@ -29,6 +29,12 @@ ApplicationWindow {
     property string tool: "hand"
     property int propertiesTab: 0
     property int layersTab: 0
+    // The footer follows Settings > Appearance (fili-theme footer, --no-footer) live; it comes back for an error
+    property bool showFooter: Fili.footer()
+    property bool errorShown: false
+    readonly property bool footerShown: showFooter || errorShown
+    Connections { target: Fili; function onThemeChanged() { win.showFooter = Fili.footer(); } }
+    Connections { target: canvas; function onChanged() { Qt.callLater(() => { win.errorShown = canvas.error !== ""; }); } }
     property string pathName: ""
     // The Curves adjustment of the selected layer: its channel (the composite is "points"), the points and the curve to draw
     property string curveChannel: "points"
@@ -994,6 +1000,8 @@ ApplicationWindow {
     // Status bar of PhotoCraft: zoom, size, layers on the left; the label of the hovered tool or the render time on the right
     FiliFooter {
         id: footer
+        visible: win.footerShown
+        height: win.footerShown ? implicitHeight : 0
         anchors { left: parent.left; right: parent.right; bottom: parent.bottom }
         error: canvas.error !== ""
         leftText: canvas.error !== "" ? canvas.error : (canvas.loaded ? Math.round(canvas.zoom * 100) + " %   ·   " + canvas.info : Fili.tr("No image"))

@@ -74,6 +74,9 @@ pub mod qobject {
         #[qinvokable]
         #[cxx_name = "reportProblem"]
         fn report_problem(self: &Fili, text: &QString) -> QString;
+        // Footer (status bar): false = hidden until it has something to say (settings and --no-footer)
+        #[qinvokable]
+        fn footer(self: &Fili) -> bool;
         // The file named on the command line, empty when there is none
         #[qinvokable]
         #[cxx_name = "startFile"]
@@ -306,6 +309,10 @@ fn spawn_quiet(command: &mut std::process::Command) -> Option<std::process::Chil
 }
 
 impl qobject::Fili {
+    pub fn footer(&self) -> bool {
+        theme::window_part("footer", &std::env::args().skip(1).collect::<Vec<_>>())
+    }
+
     pub fn ui_state(&self, key: &QString) -> QString {
         QString::from(&ui_get(&std::fs::read_to_string(ui_file()).unwrap_or_default(), &key.to_string()))
     }
