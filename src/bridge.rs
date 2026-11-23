@@ -87,6 +87,10 @@ pub mod qobject {
         // Size of the item and device pixel ratio, whenever they change
         #[qinvokable]
         fn viewport(self: Pin<&mut PhotoCanvas>, width: f64, height: f64, dpr: f64);
+        // A point of the item in the coordinates of the document, as JSON [x, y]
+        #[qinvokable]
+        #[cxx_name = "toDoc"]
+        fn to_doc(self: &PhotoCanvas, x: f64, y: f64) -> QString;
         #[qinvokable]
         #[cxx_name = "zoomAt"]
         fn zoom_at(self: Pin<&mut PhotoCanvas>, factor: f64, x: f64, y: f64);
@@ -462,6 +466,11 @@ impl qobject::PhotoCanvas {
     pub fn viewport(mut self: Pin<&mut Self>, width: f64, height: f64, dpr: f64) {
         self.as_mut().rust_mut().view.set_item(width, height, dpr);
         self.view_changed();
+    }
+
+    pub fn to_doc(&self, x: f64, y: f64) -> QString {
+        let (x, y) = self.view.to_doc(x, y);
+        QString::from(&format!("[{x},{y}]"))
     }
 
     pub fn zoom_at(mut self: Pin<&mut Self>, factor: f64, x: f64, y: f64) {

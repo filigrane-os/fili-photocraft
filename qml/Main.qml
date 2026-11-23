@@ -36,6 +36,17 @@ ApplicationWindow {
     property var curveSamples: []
     onCurvePointsChanged: curveSamples = JSON.parse(canvas.curveSamples(JSON.stringify(curvePoints)))
     readonly property var channelColors: ({ points: FiliTheme.text, red: "#e0605a", green: "#5cc06a", blue: "#5a8fe0" })
+    // Brush and Eraser: the stroke being drawn (document points), its size, hardness and colour
+    readonly property bool painting: tool === "brush" || tool === "eraser"
+    property var stroke: []
+    property real brushSize: 24
+    property real brushHardness: 0.8
+    property string brushColor: "#000000"
+    function strokeParams() {
+        const p = { layer: activeLayer ? activeLayer.id : 0, points: stroke, size: brushSize, hardness: brushHardness };
+        if (tool === "eraser") p.erase = true; else p.color = brushColor;
+        return JSON.stringify(p);
+    }
     property string tipText: ""
     function showTip(item, text) { tipText = text; }
     function hideTip(item) { tipText = ""; }
@@ -64,6 +75,8 @@ ApplicationWindow {
         "undo": { on: () => canvas.canUndo, run: () => canvas.undo() },
         "redo": { on: () => canvas.canRedo, run: () => canvas.redo() },
         "tool-hand": { on: () => true, run: () => win.tool = "hand" },
+        "tool-brush": { on: () => true, run: () => win.tool = "brush" },
+        "tool-eraser": { on: () => true, run: () => win.tool = "eraser" },
         "tool-zoom": { on: () => true, run: () => win.tool = "zoom" },
         "zoom-in": { on: () => canvas.loaded, run: () => win.zoomStep(1.25) },
         "zoom-out": { on: () => canvas.loaded, run: () => win.zoomStep(0.8) },
@@ -117,6 +130,8 @@ ApplicationWindow {
     Shortcut { sequence: "Ctrl++"; onActivated: win.runAction("zoom-in") }
     Shortcut { sequence: "Ctrl+-"; onActivated: win.runAction("zoom-out") }
     Shortcut { sequence: "H"; onActivated: win.runAction("tool-hand") }
+    Shortcut { sequence: "B"; onActivated: win.runAction("tool-brush") }
+    Shortcut { sequence: "E"; onActivated: win.runAction("tool-eraser") }
     Shortcut { sequence: "Z"; onActivated: win.runAction("tool-zoom") }
 
     // The layout of PhotoCraft: options bar on top, the tools on the left, the canvas with the tab of its document, the dock of
@@ -127,10 +142,29 @@ ApplicationWindow {
         closeButton: true
         onCloseRequested: win.runAction("close")
         Text {
+            visible: !win.painting
             text: win.tool === "zoom" ? Fili.tr("Click to zoom in, Alt+click to zoom out") : Fili.tr("Drag to move the image")
             font.family: FiliTheme.font
             font.pixelSize: FiliTheme.size
             color: FiliTheme.textSecondary
+        }
+        Row {
+            visible: win.painting
+            spacing: FiliTheme.space3
+            Text { anchors.verticalCenter: parent.verticalCenter; text: Fili.tr("Size") + " " + Math.round(win.brushSize) + " px"; font.family: FiliTheme.font; font.pixelSize: FiliTheme.size; color: FiliTheme.text }
+            FiliSlider { width: 120; anchors.verticalCenter: parent.verticalCenter; value: (win.brushSize - 1) / 199; onMoved: v => win.brushSize = 1 + v * 199 }
+            Text { anchors.verticalCenter: parent.verticalCenter; text: Fili.tr("Hardness") + " " + Math.round(win.brushHardness * 100) + " %"; font.family: FiliTheme.font; font.pixelSize: FiliTheme.size; color: FiliTheme.text }
+            FiliSlider { width: 120; anchors.verticalCenter: parent.verticalCenter; value: win.brushHardness; onMoved: v => win.brushHardness = v }
+            Repeater {
+                model: win.tool === "brush" ? ["#000000", "#ffffff", "#e0605a", "#5cc06a", "#5a8fe0", "#e8c547"] : []
+                Rectangle {
+                    required property string modelData
+                    anchors.verticalCenter: parent.verticalCenter
+                    width: 18; height: 18; radius: 3; color: modelData
+                    border { width: win.brushColor === modelData ? 2 : 1; color: win.brushColor === modelData ? FiliTheme.accentColor : FiliTheme.border }
+                    MouseArea { anchors.fill: parent; onClicked: win.brushColor = parent.modelData }
+                }
+            }
         }
         FiliButton { label: Fili.tr("Fit Screen"); enabledState: canvas.loaded; onClicked: win.runAction("zoom-fit") }
         FiliButton { label: "100 %"; enabledState: canvas.loaded; onClicked: win.runAction("zoom-actual") }
@@ -144,6 +178,8 @@ ApplicationWindow {
         swatches: false
         model: [
             { id: "hand", icon: "hand", tip: Fili.tr("Hand"), hint: "H" },
+            { id: "brush", icon: "brush", tip: Fili.tr("Brush"), hint: "B" },
+            { id: "eraser", icon: "eraser", tip: Fili.tr("Eraser"), hint: "E" },
             { id: "zoom", icon: "zoom-in", tip: Fili.tr("Zoom"), hint: "Z" }
         ]
     }
@@ -333,10 +369,25 @@ ApplicationWindow {
             anchors.fill: parent
             enabled: canvas.loaded
             acceptedButtons: Qt.LeftButton | Qt.MiddleButton
-            cursorShape: win.tool === "zoom" ? Qt.CrossCursor : pressed ? Qt.ClosedHandCursor : Qt.OpenHandCursor
+            cursorShape: win.painting || win.tool === "zoom" ? Qt.CrossCursor : pressed ? Qt.ClosedHandCursor : Qt.OpenHandCursor
             property point last
-            onPressed: e => last = Qt.point(e.x, e.y)
+            function addPoint(e) {
+                win.stroke = win.stroke.concat([JSON.parse(canvas.toDoc(e.x, e.y))]);
+                canvas.preview("paint.stroke", win.strokeParams());
+            }
+            onPressed: e => {
+                last = Qt.point(e.x, e.y);
+                if (win.painting && e.button === Qt.LeftButton && win.activeLayer) { win.stroke = []; addPoint(e); }
+            }
+            onReleased: e => {
+                if (win.stroke.length > 0) {
+                    canvas.endPreview();
+                    canvas.run("paint.stroke", win.strokeParams());
+                    win.stroke = [];
+                }
+            }
             onPositionChanged: e => {
+                if (win.stroke.length > 0 && pressedButtons & Qt.LeftButton) addPoint(e);
                 if (win.tool === "hand" || pressedButtons & Qt.MiddleButton) {
                     canvas.panBy(e.x - last.x, e.y - last.y);
                     last = Qt.point(e.x, e.y);
