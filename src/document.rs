@@ -1,20 +1,17 @@
-// The open image: a PhotoCraft session and the last composite, with no Qt in here.
+// The open image: a PhotoCraft session, with no Qt in here.
 use std::path::Path;
+use std::sync::Arc;
 use std::time::Instant;
 
 use photocraft_engine::Session;
+use photocraft_engine::doc::Document as EngineDocument;
 use serde_json::{Value, json};
 
-// Longest side of the composite shown on the canvas: a full-size composite waits for the tile renderer
-const PREVIEW_SIDE: u32 = 2048;
+use crate::render::{Request, composite};
 
 #[derive(Default)]
 pub struct Document {
     session: Option<Session>,
-    pub pixels: Vec<u8>,
-    pub width: i32,
-    pub height: i32,
-    pub render_ms: u128,
 }
 
 impl Document {
@@ -25,31 +22,20 @@ impl Document {
         let mut session = Session::new();
         session.add_document(opened.document, Some(path.to_string_lossy().into_owned()));
         self.session = Some(session);
-        self.render();
         Ok(())
     }
 
     pub fn execute(&mut self, id: &str, params: Value) -> Result<(), String> {
         let session = self.session.as_mut().ok_or("no open image")?;
-        session.execute(id, params).map_err(|e| e.to_string())?;
-        self.render();
-        Ok(())
+        session.execute(id, params).map(|_| ()).map_err(|e| e.to_string())
     }
 
     pub fn undo(&mut self) -> bool {
-        let done = self.session.as_mut().is_some_and(|s| s.undo());
-        if done {
-            self.render();
-        }
-        done
+        self.session.as_mut().is_some_and(|s| s.undo())
     }
 
     pub fn redo(&mut self) -> bool {
-        let done = self.session.as_mut().is_some_and(|s| s.redo());
-        if done {
-            self.render();
-        }
-        done
+        self.session.as_mut().is_some_and(|s| s.redo())
     }
 
     /// Name, size, layers and history of the image, as the engine reports them
@@ -60,18 +46,34 @@ impl Document {
         }
     }
 
-    fn render(&mut self) {
-        let Some(state) = self.session.as_ref().and_then(|s| s.active()) else { return };
-        let start = Instant::now();
-        let image = photocraft_compose::thumbnail(&state.doc, PREVIEW_SIDE);
-        self.render_ms = start.elapsed().as_millis();
-        self.width = image.width as i32;
-        self.height = image.height as i32;
-        self.pixels = image.pixels;
+    /// The document for the render thread: the engine keeps it in an `Arc`, so this copies no pixels
+    pub fn snapshot(&self) -> Option<Arc<EngineDocument>> {
+        self.session.as_ref().and_then(|s| s.active()).map(|state| state.doc.clone())
     }
 }
 
-/// Opens FILE, applies a curve, undoes it: proves the engine works here, and times it
+/// The layer tree as a flat list, top first, each row with its depth
+pub fn flat_layers(layers: &Value) -> Value {
+    fn walk(nodes: &Value, depth: u32, out: &mut Vec<Value>) {
+        for node in nodes.as_array().into_iter().flatten() {
+            out.push(json!({
+                "id": node["id"],
+                "name": node["name"],
+                "kind": node["kind"],
+                "visible": node["visible"],
+                "opacity": node["opacity"],
+                "selected": node["selected"],
+                "depth": depth,
+            }));
+            walk(&node["children"], depth + 1, out);
+        }
+    }
+    let mut out = Vec::new();
+    walk(layers, 0, &mut out);
+    Value::Array(out)
+}
+
+/// Opens FILE, applies a curve, hides it, undoes: proves the engine works here, and times it
 pub fn probe(file: &str) -> i32 {
     let mut doc = Document::default();
     let start = Instant::now();
@@ -79,16 +81,31 @@ pub fn probe(file: &str) -> i32 {
         eprintln!("open: {e}");
         return 1;
     }
-    let before = doc.pixels.clone();
-    println!("open {} ms, composite {} ms, {}x{}", start.elapsed().as_millis(), doc.render_ms, doc.width, doc.height);
+    println!("open {} ms", start.elapsed().as_millis());
+    let frame = |doc: &Document| {
+        let d = doc.detail();
+        let (w, h) = (d["width"].as_i64().unwrap_or(0) as i32, d["height"].as_i64().unwrap_or(0) as i32);
+        let copy = Instant::now();
+        let snapshot = doc.snapshot().expect("an open image");
+        let copy_us = copy.elapsed().as_micros();
+        let f = composite(&Request { generation: 0, doc: snapshot, rect: (0, 0, w, h), w: w as u32, h: h as u32 });
+        (f, copy_us)
+    };
+    let (before, copy_us) = frame(&doc);
+    println!("full composite {} ms ({}x{}), snapshot {copy_us} us", before.ms, before.w, before.h);
     if let Err(e) = doc.execute("layer.newAdjustmentLayer.curves", json!({"points": [[0, 0], [64, 40], [192, 216], [255, 255]]})) {
         eprintln!("curve: {e}");
         return 1;
     }
-    let changed = doc.pixels != before;
-    println!("curve {} ms, pixels changed: {changed}", doc.render_ms);
-    let undone = doc.undo() && doc.pixels == before;
+    let (curved, _) = frame(&doc);
+    let changed = curved.pixels != before.pixels;
+    println!("curve {} ms, pixels changed: {changed}", curved.ms);
+    let layers = flat_layers(&doc.detail()["layers"]);
+    let top = layers[0]["id"].clone();
+    let hidden = doc.execute("layer.setProps", json!({"layer": top, "visible": false})).is_ok() && frame(&doc).0.pixels == before.pixels;
+    println!("hiding the curve restores the pixels: {hidden}");
+    let undone = doc.undo() && doc.undo() && frame(&doc).0.pixels == before.pixels;
     println!("undo restores the pixels: {undone}");
-    println!("layers: {}", doc.detail()["layers"]);
-    if changed && undone { 0 } else { 1 }
+    println!("layers: {layers}");
+    if changed && hidden && undone { 0 } else { 1 }
 }

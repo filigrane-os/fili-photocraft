@@ -10,7 +10,8 @@ build = "build.rs"
 cxx = "1.0.205"
 cxx-qt = "0.10.0"
 cxx-qt-lib = { version = "0.10.0", features = ["qt_gui", "qt_qml"] }
-fili-ui = { git = "https://github.com/filigrane-os/fili-ui", tag = "v0.3.0" }
+# Back to a tag once FiliLayerRow is released
+fili-ui = { path = "../fili-ui" }
 libc = "0.2.191"
 serde_json = "1"
 # The PhotoCraft engine (MIT OR Apache-2.0), without its egui interface. All four stay on one upstream commit.

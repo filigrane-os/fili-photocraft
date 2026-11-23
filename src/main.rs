@@ -3,8 +3,10 @@ use fili_ui as _;
 
 mod bridge;
 mod document;
+mod render;
 #[allow(dead_code)]
 mod theme;
+mod view;
 
 use cxx_qt_lib::{QGuiApplication, QQmlApplicationEngine, QString, QUrl};
 
