@@ -84,6 +84,17 @@ impl View {
         self.clamp();
     }
 
+    /// Puts the point (x, y) of the document at the centre of the item (the Navigator)
+    pub fn center_on(&mut self, x: f64, y: f64) {
+        if self.fit {
+            self.zoom = self.fit_zoom();
+            self.fit = false;
+        }
+        self.cx = x;
+        self.cy = y;
+        self.clamp();
+    }
+
     /// An axis on which the image is smaller than the item stays centred
     fn clamp(&mut self) {
         let zoom = self.zoom();

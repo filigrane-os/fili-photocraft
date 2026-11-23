@@ -90,6 +90,8 @@ pub mod qobject {
         #[qproperty(QString, error, READ, NOTIFY = changed)]
         #[qproperty(QString, layers, READ, NOTIFY = changed)]
         // Bounding box of the selection as JSON [x, y, width, height], empty when nothing is selected
+        // The picture of the Navigator panel (a file URL, new at every change of the document) and its size in the document
+        #[qproperty(QString, navigator, READ, NOTIFY = changed)]
         #[qproperty(QString, selection, READ, NOTIFY = changed)]
         // The states of the history as JSON {"names":[…],"applied":n}: the last one is the current state
         #[qproperty(QString, history, READ, NOTIFY = changed)]
@@ -147,6 +149,9 @@ pub mod qobject {
         #[qinvokable]
         #[cxx_name = "toItem"]
         fn to_item(self: &PhotoCanvas, x: f64, y: f64) -> QString;
+        #[qinvokable]
+        #[cxx_name = "centerOn"]
+        fn center_on(self: Pin<&mut PhotoCanvas>, x: f64, y: f64);
         #[qinvokable]
         #[cxx_name = "zoomAt"]
         fn zoom_at(self: Pin<&mut PhotoCanvas>, factor: f64, x: f64, y: f64);
@@ -401,6 +406,7 @@ pub struct PhotoCanvasRust {
     error: QString,
     layers: QString,
     selection: QString,
+    navigator: QString,
     history: QString,
     loaded: bool,
     can_undo: bool,
@@ -530,8 +536,12 @@ impl qobject::PhotoCanvas {
                     made.insert(id, format!("file://{}", path.display()));
                 }
             }
+            let picture = photocraft_compose::thumbnail(&doc, 220);
+            let nav = dir.join(format!("navigator-{run}.bmp"));
+            let nav = std::fs::write(&nav, crate::document::bmp(picture.width, picture.height, &picture.pixels)).ok().map(|_| format!("file://{}", nav.display()));
             let _ = qt.queue(move |mut canvas| {
                 if canvas.thumb_run == run {
+                    canvas.as_mut().rust_mut().navigator = QString::from(&nav.unwrap_or_default());
                     canvas.as_mut().rust_mut().thumbs = made;
                     canvas.as_mut().publish_layers();
                     canvas.changed();
@@ -680,6 +690,11 @@ impl qobject::PhotoCanvas {
     pub fn to_doc(&self, x: f64, y: f64) -> QString {
         let (x, y) = self.view.to_doc(x, y);
         QString::from(&format!("[{x},{y}]"))
+    }
+
+    pub fn center_on(mut self: Pin<&mut Self>, x: f64, y: f64) {
+        self.as_mut().rust_mut().view.center_on(x, y);
+        self.view_changed();
     }
 
     pub fn zoom_at(mut self: Pin<&mut Self>, factor: f64, x: f64, y: f64) {

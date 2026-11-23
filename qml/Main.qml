@@ -162,6 +162,8 @@ ApplicationWindow {
         if (row.index !== undefined) { const a = adjustment.params[row.key].slice(); a[row.index] = v; p[row.key] = a; } else p[row.key] = v;
         return JSON.stringify(p);
     }
+    // Size of the document in pixels, from its info line "W × H · n layers"
+    readonly property var docSize: { const m = /^(\d+) × (\d+)/.exec(canvas.info); return m ? { w: Number(m[1]), h: Number(m[2]) } : { w: 0, h: 0 }; }
     property var penPoints: []
     property string tipText: ""
     function showTip(item, text) { tipText = text; }
@@ -407,8 +409,8 @@ ApplicationWindow {
         anchors { right: parent.right; top: optionsBar.bottom; bottom: debug.top }
         FiliDockGroup {
             Layout.fillWidth: true
-            Layout.preferredHeight: win.curvesShown || win.propertiesTab === 2 || win.adjustmentSliders.length > 3 ? 440 : win.adjustmentSliders.length > 0 ? 300 : 200
-            tabs: [Fili.tr("Properties"), Fili.tr("Adjustments"), Fili.tr("Color")]
+            Layout.preferredHeight: win.curvesShown || win.propertiesTab >= 2 || win.adjustmentSliders.length > 3 ? 440 : win.adjustmentSliders.length > 0 ? 300 : 200
+            tabs: [Fili.tr("Properties"), Fili.tr("Adjustments"), Fili.tr("Color"), Fili.tr("Navigator")]
             currentIndex: win.propertiesTab
             onTabClicked: i => win.propertiesTab = i
             Item {
@@ -567,6 +569,42 @@ ApplicationWindow {
                 FiliSidebarRow { label: Fili.tr("Posterize"); enabled: canvas.loaded; onClicked: win.runAction("adjust-posterize") }
                 FiliSidebarRow { label: Fili.tr("Photo Filter"); enabled: canvas.loaded; onClicked: win.runAction("adjust-photo-filter") }
             }
+            Item {
+                id: navigatorView
+                // The picture of the document and the part the canvas shows (a frame), a click or a drag moves the view
+                readonly property real ratio: nav.implicitWidth > 0 ? nav.implicitWidth / nav.implicitHeight : 1
+                Image {
+                    id: nav
+                    anchors.centerIn: parent
+                    width: Math.min(parent.width - 2 * FiliTheme.space3, (parent.height - 2 * FiliTheme.space3) * navigatorView.ratio)
+                    height: width / navigatorView.ratio
+                    source: canvas.navigator
+                    cache: false
+                    fillMode: Image.Stretch
+                    Rectangle {
+                        readonly property var rect: {
+                            canvas.viewKey;
+                            if (!canvas.loaded || canvasArea.width <= 0) return null;
+                            const a = JSON.parse(canvas.toDoc(0, 0)), b = JSON.parse(canvas.toDoc(canvasArea.width, canvasArea.height));
+                            const dw = win.docSize.w, dh = win.docSize.h;
+                            if (dw <= 0 || dh <= 0) return null;
+                            const x0 = Math.max(0, a[0]) / dw, y0 = Math.max(0, a[1]) / dh, x1 = Math.min(dw, b[0]) / dw, y1 = Math.min(dh, b[1]) / dh;
+                            return Qt.rect(x0 * nav.width, y0 * nav.height, Math.max(2, (x1 - x0) * nav.width), Math.max(2, (y1 - y0) * nav.height));
+                        }
+                        visible: rect !== null
+                        x: rect ? rect.x : 0; y: rect ? rect.y : 0; width: rect ? rect.width : 0; height: rect ? rect.height : 0
+                        color: "transparent"
+                        border { width: 2; color: FiliTheme.accentColor }
+                    }
+                    MouseArea {
+                        anchors.fill: parent
+                        function go(e) { canvas.centerOn(Math.max(0, Math.min(1, e.x / nav.width)) * win.docSize.w, Math.max(0, Math.min(1, e.y / nav.height)) * win.docSize.h); }
+                        onPressed: e => go(e)
+                        onPositionChanged: e => { if (pressed) go(e); }
+                    }
+                }
+                Text { anchors.centerIn: parent; visible: !canvas.loaded; text: Fili.tr("No image"); font.family: FiliTheme.font; font.pixelSize: FiliTheme.size; color: FiliTheme.textSecondary }
+            }
             Flickable {
                 id: colorView
                 clip: true
@@ -712,6 +750,7 @@ ApplicationWindow {
     }
     Rectangle {
         anchors { left: toolStrip.right; right: dock.left; top: documentTab.bottom; bottom: debug.top }
+        id: canvasArea
         color: FiliTheme.backgroundDeep
 
         PhotoCanvas {
