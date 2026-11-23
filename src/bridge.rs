@@ -58,6 +58,8 @@ pub mod qobject {
         #[qproperty(QString, layers, READ, NOTIFY = changed)]
         // Bounding box of the selection as JSON [x, y, width, height], empty when nothing is selected
         #[qproperty(QString, selection, READ, NOTIFY = changed)]
+        // The states of the history as JSON {"names":[…],"applied":n}: the last one is the current state
+        #[qproperty(QString, history, READ, NOTIFY = changed)]
         #[qproperty(bool, loaded, READ, NOTIFY = changed)]
         #[qproperty(bool, can_undo, cxx_name = "canUndo", READ, NOTIFY = changed)]
         #[qproperty(bool, can_redo, cxx_name = "canRedo", READ, NOTIFY = changed)]
@@ -92,6 +94,13 @@ pub mod qobject {
         #[qinvokable]
         fn viewport(self: Pin<&mut PhotoCanvas>, width: f64, height: f64, dpr: f64);
         // A point of the item in the coordinates of the document, as JSON [x, y]
+        // The answer of a command that only reads (channel.list, path.list, swatches.list…), as JSON; "null" when it fails
+        #[qinvokable]
+        fn ask(self: Pin<&mut PhotoCanvas>, id: &QString, params: &QString) -> QString;
+        // Goes back to the state `index` of the history ({names, applied} in `history`)
+        #[qinvokable]
+        #[cxx_name = "historyGoto"]
+        fn history_goto(self: Pin<&mut PhotoCanvas>, index: i32);
         #[qinvokable]
         #[cxx_name = "toDoc"]
         fn to_doc(self: &PhotoCanvas, x: f64, y: f64) -> QString;
@@ -137,6 +146,7 @@ use std::{path::PathBuf, pin::Pin};
 
 use cxx_qt::{CxxQtType, Threading};
 use photocraft_engine::doc::adjust::CurvePoint;
+use serde_json::json;
 use cxx_qt_lib::{QColor, QImage, QImageFormat, QPainterRenderHint, QRect, QRectF, QString, c_void};
 
 use crate::{
@@ -272,6 +282,7 @@ pub struct PhotoCanvasRust {
     error: QString,
     layers: QString,
     selection: QString,
+    history: QString,
     loaded: bool,
     can_undo: bool,
     can_redo: bool,
@@ -351,6 +362,8 @@ impl qobject::PhotoCanvas {
             r.info = QString::from(&info);
             r.error = QString::from(&error.unwrap_or_default());
             r.rows = layers;
+            let (names, applied) = r.doc.history();
+            r.history = QString::from(&json!({"names": names, "applied": applied}).to_string());
             r.selection = QString::from(&bounds.map(|b| format!("{b:?}")).unwrap_or_default());
             r.loaded = !detail.as_object().is_none_or(|o| o.is_empty());
             r.can_undo = detail["canUndo"].as_bool().unwrap_or(false);
@@ -502,6 +515,22 @@ impl qobject::PhotoCanvas {
     pub fn to_item(&self, x: f64, y: f64) -> QString {
         let (x, y) = self.view.to_item(x, y);
         QString::from(&format!("[{x},{y}]"))
+    }
+
+    pub fn ask(mut self: Pin<&mut Self>, id: &QString, params: &QString) -> QString {
+        let params = serde_json::from_str(&params.to_string()).unwrap_or_else(|_| json!({}));
+        let answer = self.as_mut().rust_mut().doc.query(&id.to_string(), params);
+        QString::from(&answer.map_or_else(|_| "null".to_string(), |v| v.to_string()))
+    }
+
+    /// The history keeps the states already applied: going back is undoing down to the one asked for
+    pub fn history_goto(mut self: Pin<&mut Self>, index: i32) {
+        let (names, _) = self.doc.history();
+        let last = names.as_array().map_or(0, Vec::len) as i32 - 1;
+        for _ in index.max(0)..last {
+            self.as_mut().rust_mut().doc.undo();
+        }
+        self.refresh(None);
     }
 
     pub fn to_doc(&self, x: f64, y: f64) -> QString {

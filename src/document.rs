@@ -30,6 +30,20 @@ impl Document {
         session.execute(id, params).map(|_| ()).map_err(|e| e.to_string())
     }
 
+    /// Names of the history states and how many of them are applied (the others can be redone)
+    pub fn history(&self) -> (Value, usize) {
+        match self.session.as_ref().and_then(|s| s.active()) {
+            Some(state) => (json!(state.history.entries()), state.history.past_len()),
+            None => (json!([]), 0),
+        }
+    }
+
+    /// Runs a command and returns what it answers (lists, information)
+    pub fn query(&mut self, id: &str, params: Value) -> Result<Value, String> {
+        let session = self.session.as_mut().ok_or("no open image")?;
+        session.execute(id, params).map_err(|e| e.to_string())
+    }
+
     pub fn undo(&mut self) -> bool {
         self.session.as_mut().is_some_and(|s| s.undo())
     }
@@ -254,5 +268,12 @@ pub fn probe(file: &str) -> i32 {
         }
     }
     println!("tool commands accepted: {tools_ok}");
+    println!("history: {} applied {}", doc.history().0, doc.history().1);
+    doc.undo();
+    doc.undo();
+    println!("after two undos: {} entries, applied {}", doc.history().0.as_array().map_or(0, Vec::len), doc.history().1);
+    for q in ["channel.list", "path.list", "swatches.list"] {
+        println!("{q}: {:?}", doc.query(q, json!({})).map(|v| v.to_string().chars().take(400).collect::<String>()));
+    }
     if changed && hidden && undone && tools_ok { 0 } else { 1 }
 }

@@ -28,6 +28,8 @@ ApplicationWindow {
     // The tool in hand (the tool strip), and the label of what the pointer rests on (FiliToolStrip asks the window to draw it)
     property string tool: "hand"
     property int propertiesTab: 0
+    property int layersTab: 0
+    property string pathName: ""
     // The Curves adjustment of the selected layer: its channel (the composite is "points"), the points and the curve to draw
     property string curveChannel: "points"
     readonly property var adjustment: activeLayer && activeLayer.adjustment ? activeLayer.adjustment : null
@@ -126,6 +128,12 @@ ApplicationWindow {
         const a = JSON.parse(canvas.toItem(m.x, m.y)), b = JSON.parse(canvas.toItem(m.x + m.w, m.y + m.h));
         return Qt.rect(a[0], a[1], b[0] - a[0], b[1] - a[1]);
     }
+    // Panels fed by read-only commands of the engine; they follow `canvas.layers`, which changes with every refresh
+    readonly property var channelList: { canvas.layers; try { const c = JSON.parse(canvas.ask("channel.list", "{}")); return c ? [{ name: c.composite, visible: c.compositeVisible, composite: true }].concat(c.colors, c.alpha) : []; } catch (e) { return []; } }
+    readonly property var pathList: { canvas.layers; try { const p = JSON.parse(canvas.ask("path.list", "{}")); return p ? p.paths.map(x => typeof x === "string" ? { name: x } : x) : []; } catch (e) { return []; } }
+    readonly property var historyState: { try { return JSON.parse(canvas.history); } catch (e) { return { names: [], applied: 0 }; } }
+    readonly property var swatchGroups: { try { return JSON.parse(canvas.ask("swatches.list", "{}")).groups; } catch (e) { return []; } }
+    property var penPoints: []
     property string tipText: ""
     function showTip(item, text) { tipText = text; }
     function hideTip(item) { tipText = ""; }
@@ -351,8 +359,8 @@ ApplicationWindow {
         anchors { right: parent.right; top: optionsBar.bottom; bottom: footer.top }
         FiliDockGroup {
             Layout.fillWidth: true
-            Layout.preferredHeight: win.curvesShown ? 440 : 200
-            tabs: [Fili.tr("Properties"), Fili.tr("Adjustments")]
+            Layout.preferredHeight: win.curvesShown || win.propertiesTab === 2 ? 440 : 200
+            tabs: [Fili.tr("Properties"), Fili.tr("Adjustments"), Fili.tr("Color")]
             currentIndex: win.propertiesTab
             onTabClicked: i => win.propertiesTab = i
             Item {
@@ -470,11 +478,56 @@ ApplicationWindow {
                 FiliSidebarRow { label: Fili.tr("Curves"); enabled: canvas.loaded; onClicked: win.runAction("adjust-curves") }
                 FiliSidebarRow { label: Fili.tr("Invert"); enabled: canvas.loaded; onClicked: win.runAction("adjust-invert") }
             }
+            Flickable {
+                id: colorView
+                clip: true
+                contentHeight: colorColumn.height + FiliTheme.space3
+                KineticScroll {}
+                Column {
+                    id: colorColumn
+                    x: FiliTheme.space3
+                    width: colorView.width - 2 * FiliTheme.space3
+                    y: FiliTheme.space3
+                    spacing: FiliTheme.space2
+                    Row {
+                        spacing: FiliTheme.space3
+                        Rectangle { width: 28; height: 28; radius: 3; color: win.brushColor; border { width: 1; color: FiliTheme.border } }
+                        Rectangle { width: 28; height: 28; radius: 3; color: win.bgColor; border { width: 1; color: FiliTheme.border } }
+                        Text { anchors.verticalCenter: parent.verticalCenter; text: win.brushColor; font.family: FiliTheme.font; font.pixelSize: FiliTheme.size; color: FiliTheme.textSecondary }
+                        FiliButton { anchors.verticalCenter: parent.verticalCenter; label: Fili.tr("Swap"); onClicked: { const c = win.brushColor; win.brushColor = win.bgColor; win.bgColor = c; } }
+                    }
+                    Repeater {
+                        model: win.swatchGroups
+                        Column {
+                            required property var modelData
+                            width: colorColumn.width
+                            spacing: FiliTheme.space1
+                            Text { text: modelData.name; font.family: FiliTheme.font; font.pixelSize: FiliTheme.sizeSmall; color: FiliTheme.muted }
+                            Flow {
+                                width: parent.width
+                                spacing: 3
+                                Repeater {
+                                    model: modelData.swatches
+                                    Rectangle {
+                                        required property var modelData
+                                        width: 18; height: 18; radius: 2; color: modelData.hex
+                                        border { width: win.brushColor === modelData.hex ? 2 : 1; color: win.brushColor === modelData.hex ? FiliTheme.accentColor : FiliTheme.border }
+                                        MouseArea { anchors.fill: parent; onClicked: e => { if (e.modifiers & Qt.AltModifier) win.bgColor = parent.modelData.hex; else win.brushColor = parent.modelData.hex; } }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+                FiliScrollBar { flick: colorView; anchors { top: parent.top; bottom: parent.bottom; right: parent.right } }
+            }
         }
         FiliDockGroup {
             Layout.fillWidth: true
             Layout.fillHeight: true
-            tabs: [Fili.tr("Layers")]
+            tabs: [Fili.tr("Layers"), Fili.tr("Channels"), Fili.tr("Paths"), Fili.tr("History")]
+            currentIndex: win.layersTab
+            onTabClicked: i => win.layersTab = i
             ListView {
                 id: layersView
                 clip: true
@@ -494,6 +547,67 @@ ApplicationWindow {
                     onVisibilityToggled: shown => win.setLayer(modelData.id, { visible: shown })
                 }
                 FiliScrollBar { flick: layersView; anchors { top: parent.top; bottom: parent.bottom; right: parent.right } }
+            }
+            ListView {
+                id: channelsView
+                clip: true
+                model: win.channelList
+                KineticScroll {}
+                delegate: FiliLayerRow {
+                    required property var modelData
+                    width: channelsView.width
+                    label: modelData.name
+                    layerVisible: modelData.visible !== false
+                    onClicked: canvas.run("channel.target", JSON.stringify({ channel: modelData.composite ? "composite" : modelData.name }))
+                    onVisibilityToggled: canvas.run("channel.setVisible", JSON.stringify({ channel: modelData.composite ? "composite" : modelData.name }))
+                }
+                FiliScrollBar { flick: channelsView; anchors { top: parent.top; bottom: parent.bottom; right: parent.right } }
+            }
+            Item {
+                ListView {
+                    id: pathsView
+                    anchors { fill: parent; bottomMargin: pathButtons.height }
+                    clip: true
+                    model: win.pathList
+                    KineticScroll {}
+                    delegate: FiliSidebarRow {
+                        required property var modelData
+                        width: pathsView.width
+                        label: modelData.name
+                        selected: win.pathName === modelData.name
+                        onClicked: win.pathName = modelData.name
+                    }
+                    FiliScrollBar { flick: pathsView; anchors { top: parent.top; bottom: parent.bottom; right: parent.right } }
+                }
+                Text {
+                    anchors.centerIn: parent
+                    visible: win.pathList.length === 0
+                    text: Fili.tr("No paths. The Pen tool makes shapes.")
+                    font.family: FiliTheme.font; font.pixelSize: FiliTheme.size; color: FiliTheme.textSecondary
+                }
+                Row {
+                    id: pathButtons
+                    anchors { left: parent.left; right: parent.right; bottom: parent.bottom; margins: FiliTheme.space2 }
+                    spacing: FiliTheme.space2
+                    FiliButton { label: Fili.tr("Make Selection"); enabledState: win.pathName !== ""; onClicked: canvas.run("path.toSelection", JSON.stringify({ name: win.pathName })) }
+                    FiliButton { label: Fili.tr("Delete"); enabledState: win.pathName !== ""; onClicked: { canvas.run("path.delete", JSON.stringify({ name: win.pathName })); win.pathName = ""; } }
+                }
+            }
+            ListView {
+                id: historyView
+                clip: true
+                model: win.historyState.names
+                KineticScroll {}
+                onCountChanged: positionViewAtEnd()
+                delegate: FiliSidebarRow {
+                    required property string modelData
+                    required property int index
+                    width: historyView.width
+                    label: modelData
+                    selected: index === win.historyState.names.length - 1
+                    onClicked: canvas.historyGoto(index)
+                }
+                FiliScrollBar { flick: historyView; anchors { top: parent.top; bottom: parent.bottom; right: parent.right } }
             }
         }
     }
