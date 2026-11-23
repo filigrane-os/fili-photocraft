@@ -31,6 +31,16 @@ pub mod qobject {
         fn theme_json(self: &Fili) -> QString;
         #[qinvokable]
         fn tr(self: &Fili, text: &QString) -> QString;
+        // Command of `fili-photocraft ctl` (the menu of the fili-bar, the assistant): number to reply with, verb, argument
+        #[qsignal]
+        fn command(self: Pin<&mut Fili>, id: i32, verb: &QString, arg: &QString);
+        // Answer to a command (see Main.qml, onCommand)
+        #[qinvokable]
+        fn reply(self: &Fili, id: i32, answer: &QString);
+        // About card: rows [[label, value]] as JSON
+        #[qinvokable]
+        #[cxx_name = "aboutRows"]
+        fn about_rows(self: &Fili) -> QString;
         // The file named on the command line, empty when there is none
         #[qinvokable]
         #[cxx_name = "startFile"]
@@ -176,10 +186,31 @@ impl cxx_qt::Initialize for qobject::Fili {
             })
             .is_ok()
         });
+        // Commands from `fili-photocraft ctl`
+        let qt = self.qt_thread();
+        crate::ctl::serve(move |id, verb, arg| {
+            let _ = qt.queue(move |mut f| f.as_mut().command(id, &QString::from(&verb), &QString::from(&arg)));
+        });
     }
 }
 
 impl qobject::Fili {
+    pub fn reply(&self, id: i32, answer: &QString) {
+        crate::ctl::reply(id, &answer.to_string());
+    }
+
+    pub fn about_rows(&self) -> QString {
+        let version = option_env!("FILI_PHOTOCRAFT_GIT").map(str::to_string).unwrap_or_else(|| env!("CARGO_PKG_VERSION").to_string());
+        let rows = [
+            ("Also known as", "fili-photocraft".to_string()),
+            ("Part of", "Filigrane".to_string()),
+            ("Version", version),
+            ("Engine", "PhotoCraft (MIT or Apache-2.0)".to_string()),
+        ];
+        let json: Vec<String> = rows.iter().map(|(k, v)| format!("[{:?},{:?}]", k, v)).collect();
+        QString::from(&format!("[{}]", json.join(",")))
+    }
+
     pub fn theme_json(&self) -> QString {
         QString::from(&theme::theme_json())
     }

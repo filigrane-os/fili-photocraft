@@ -2,6 +2,12 @@
 use cxx_qt_build::{CxxQtBuilder, QmlModule};
 
 fn main() {
+    // Version of the About card: tag or commit of the repository (absent outside a repository)
+    if let Ok(o) = std::process::Command::new("git").args(["describe", "--tags", "--always", "--dirty"]).output()
+        && o.status.success()
+    {
+        println!("cargo:rustc-env=FILI_PHOTOCRAFT_GIT={}", String::from_utf8_lossy(&o.stdout).trim());
+    }
     CxxQtBuilder::new_qml_module(
         QmlModule::new("Fili.Photocraft")
             .qml_files(["qml/Main.qml"])

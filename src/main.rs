@@ -2,6 +2,7 @@
 use fili_ui as _;
 
 mod bridge;
+mod ctl;
 mod document;
 mod render;
 #[allow(dead_code)]
@@ -18,7 +19,17 @@ fn main() {
             return;
         }
         Some("-h" | "--help") => {
-            println!("fili-photocraft {}: the image editor of Filigrane\n\nUsage: fili-photocraft [FILE]", env!("CARGO_PKG_VERSION"));
+            println!("fili-photocraft {}: the image editor of Filigrane\n\nUsage: fili-photocraft [FILE]   open the window\n       fili-photocraft ctl [--pid PID] action NAME [ARG] | state | actions", env!("CARGO_PKG_VERSION"));
+            return;
+        }
+        Some("ctl") => {
+            match ctl::client(&args[2..]) {
+                Ok(answer) => println!("{answer}"),
+                Err(e) => {
+                    eprintln!("fili-photocraft ctl: {e}");
+                    std::process::exit(1);
+                }
+            }
             return;
         }
         Some("probe") => {

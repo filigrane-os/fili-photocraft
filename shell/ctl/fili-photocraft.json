@@ -1,0 +1,84 @@
+{
+  "v": 1,
+  "app_id": "fili-photocraft",
+  "name": "PhotoCraft",
+  "program": "fili-photocraft",
+  "ctl": "fili-photocraft ctl --pid %pid",
+  "commands": [
+    {
+      "verb": "action",
+      "args": "NAME [ARG]",
+      "summary": "Run a command of the window (the same names as its menu)",
+      "reads": false
+    },
+    {
+      "verb": "state",
+      "summary": "JSON of the state of the window",
+      "reads": true
+    },
+    {
+      "verb": "actions",
+      "summary": "JSON list of the action names",
+      "reads": true
+    }
+  ],
+  "actions": [
+    {
+      "name": "about",
+      "label": "About PhotoCraft"
+    },
+    {
+      "name": "open",
+      "label": "Open…",
+      "keys": "Ctrl+O",
+      "args": "[PATH]"
+    },
+    {
+      "name": "undo",
+      "label": "Undo",
+      "keys": "Ctrl+Z"
+    },
+    {
+      "name": "redo",
+      "label": "Redo",
+      "keys": "Ctrl+Shift+Z"
+    },
+    {
+      "name": "zoom-in",
+      "label": "Zoom In",
+      "keys": "Ctrl+="
+    },
+    {
+      "name": "zoom-out",
+      "label": "Zoom Out",
+      "keys": "Ctrl+-"
+    },
+    {
+      "name": "zoom-fit",
+      "label": "Fit on Screen",
+      "keys": "Ctrl+0"
+    },
+    {
+      "name": "zoom-actual",
+      "label": "Actual Size",
+      "keys": "Ctrl+1"
+    },
+    {
+      "name": "toggle-layer",
+      "label": "Show or Hide Layer"
+    },
+    {
+      "name": "adjust-curves",
+      "label": "New Curves Adjustment"
+    },
+    {
+      "name": "adjust-invert",
+      "label": "New Invert Adjustment"
+    },
+    {
+      "name": "close",
+      "label": "Close",
+      "keys": "Ctrl+W"
+    }
+  ]
+}

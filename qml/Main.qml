@@ -33,14 +33,70 @@ ApplicationWindow {
         onAccepted: canvas.open(selectedFile.toString())
     }
 
-    Shortcut { sequence: "Ctrl+Z"; enabled: canvas.canUndo; onActivated: canvas.undo() }
-    Shortcut { sequence: "Ctrl+Shift+Z"; enabled: canvas.canRedo; onActivated: canvas.redo() }
-    Shortcut { sequence: "Ctrl+W"; onActivated: Qt.quit() }
-    Shortcut { sequence: "Ctrl+O"; onActivated: openDialog.open() }
-    Shortcut { sequence: "Ctrl+0"; onActivated: canvas.zoomFit() }
-    Shortcut { sequence: "Ctrl+1"; onActivated: canvas.zoomActual() }
-    Shortcut { sequences: ["Ctrl+=", "Ctrl++"]; onActivated: win.zoomStep(1.25) }
-    Shortcut { sequence: "Ctrl+-"; onActivated: win.zoomStep(0.8) }
+    FiliAboutCard {
+        id: about
+        appName: "PhotoCraft"
+        tagline: Fili.tr("The image editor of Filigrane")
+    }
+
+    // Every command of the window, by name: the menu of the fili-bar, `fili-photocraft ctl action NAME` and the shortcuts below
+    // all come here (scripts/check-shell-menu.py keeps this table, the menu and the shortcuts in agreement)
+    readonly property var actions: ({
+        "about": { on: () => true, run: () => about.visible ? about.close() : about.show() },
+        "open": { on: () => true, run: arg => arg ? canvas.open(arg) : openDialog.open() },
+        "undo": { on: () => canvas.canUndo, run: () => canvas.undo() },
+        "redo": { on: () => canvas.canRedo, run: () => canvas.redo() },
+        "zoom-in": { on: () => canvas.loaded, run: () => win.zoomStep(1.25) },
+        "zoom-out": { on: () => canvas.loaded, run: () => win.zoomStep(0.8) },
+        "zoom-fit": { on: () => canvas.loaded, run: () => canvas.zoomFit() },
+        "zoom-actual": { on: () => canvas.loaded, run: () => canvas.zoomActual() },
+        "toggle-layer": { on: () => win.activeLayer !== null, run: () => win.setLayer(win.activeLayer.id, { visible: !win.activeLayer.visible }) },
+        "adjust-curves": { on: () => canvas.loaded, run: () => canvas.run("layer.newAdjustmentLayer.curves", '{"points":[[0,0],[64,40],[192,216],[255,255]]}') },
+        "adjust-invert": { on: () => canvas.loaded, run: () => canvas.run("layer.newAdjustmentLayer.invert", "{}") },
+        "close": { on: () => true, run: () => Qt.quit() }
+    })
+    function runAction(name, arg) {
+        const a = actions[name];
+        if (!a)
+            return { ok: false, error: "unknown action: " + name + " (fili-photocraft ctl actions lists them)" };
+        if (!a.on())
+            return { ok: false, error: "action disabled now: " + name };
+        a.run(arg);
+        return { ok: true, error: canvas.error };
+    }
+    function stateJson() {
+        return {
+            loaded: canvas.loaded, name: canvas.title, info: canvas.info, zoom: canvas.zoom, canUndo: canvas.canUndo, canRedo: canvas.canRedo,
+            layers: layerList.length, activeLayer: activeLayer ? activeLayer.name : "", error: canvas.error
+        };
+    }
+    Connections {
+        target: Fili
+        function onCommand(id, verb, arg) {
+            let answer;
+            const space = arg.indexOf(" ");
+            if (verb === "action")
+                answer = win.runAction(space < 0 ? arg : arg.slice(0, space), space < 0 ? "" : arg.slice(space + 1));
+            else if (verb === "actions")
+                answer = { ok: true, actions: Object.keys(win.actions).map(n => ({ name: n, enabled: win.actions[n].on() })) };
+            else if (verb === "state")
+                answer = Object.assign({ ok: true }, win.stateJson());
+            else
+                answer = { ok: false, error: "unknown command: " + verb };
+            Fili.reply(id, JSON.stringify(answer));
+        }
+    }
+
+    Shortcut { sequence: "Ctrl+Z"; onActivated: win.runAction("undo") }
+    Shortcut { sequence: "Ctrl+Shift+Z"; onActivated: win.runAction("redo") }
+    Shortcut { sequence: "Ctrl+W"; onActivated: win.runAction("close") }
+    Shortcut { sequence: "Ctrl+Q"; onActivated: win.runAction("close") }
+    Shortcut { sequence: "Ctrl+O"; onActivated: win.runAction("open") }
+    Shortcut { sequence: "Ctrl+0"; onActivated: win.runAction("zoom-fit") }
+    Shortcut { sequence: "Ctrl+1"; onActivated: win.runAction("zoom-actual") }
+    Shortcut { sequence: "Ctrl+="; onActivated: win.runAction("zoom-in") }
+    Shortcut { sequence: "Ctrl++"; onActivated: win.runAction("zoom-in") }
+    Shortcut { sequence: "Ctrl+-"; onActivated: win.runAction("zoom-out") }
 
     FiliHeader {
         id: header
