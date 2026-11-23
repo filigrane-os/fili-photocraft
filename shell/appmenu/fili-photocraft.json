@@ -41,6 +41,21 @@
       ]
     },
     {
+      "label": "Select",
+      "children": [
+        {
+          "label": "Select All",
+          "keys": "Ctrl+A",
+          "exec": "fili-photocraft ctl --pid %pid action select-all"
+        },
+        {
+          "label": "Deselect",
+          "keys": "Ctrl+D",
+          "exec": "fili-photocraft ctl --pid %pid action deselect"
+        }
+      ]
+    },
+    {
       "label": "Layer",
       "children": [
         {
@@ -88,6 +103,138 @@
     {
       "label": "Tools",
       "children": [
+        {
+          "label": "Move",
+          "keys": "V",
+          "exec": "fili-photocraft ctl --pid %pid action tool-move"
+        },
+        {
+          "label": "Rectangular Marquee",
+          "keys": "M",
+          "exec": "fili-photocraft ctl --pid %pid action tool-marquee"
+        },
+        {
+          "label": "Elliptical Marquee",
+          "exec": "fili-photocraft ctl --pid %pid action tool-ellipse"
+        },
+        {
+          "label": "Lasso",
+          "keys": "L",
+          "exec": "fili-photocraft ctl --pid %pid action tool-lasso"
+        },
+        {
+          "label": "Magic Wand",
+          "keys": "W",
+          "exec": "fili-photocraft ctl --pid %pid action tool-wand"
+        },
+        {
+          "label": "Crop",
+          "keys": "C",
+          "exec": "fili-photocraft ctl --pid %pid action tool-crop"
+        },
+        {
+          "label": "Eyedropper",
+          "keys": "I",
+          "exec": "fili-photocraft ctl --pid %pid action tool-eyedropper"
+        },
+        {
+          "label": "Brush",
+          "keys": "B",
+          "exec": "fili-photocraft ctl --pid %pid action tool-brush"
+        },
+        {
+          "label": "Pencil",
+          "exec": "fili-photocraft ctl --pid %pid action tool-pencil"
+        },
+        {
+          "label": "Clone Stamp",
+          "keys": "S",
+          "exec": "fili-photocraft ctl --pid %pid action tool-stamp"
+        },
+        {
+          "label": "History Brush",
+          "keys": "Y",
+          "exec": "fili-photocraft ctl --pid %pid action tool-history"
+        },
+        {
+          "label": "Spot Healing Brush",
+          "keys": "J",
+          "exec": "fili-photocraft ctl --pid %pid action tool-heal"
+        },
+        {
+          "label": "Gradient",
+          "keys": "G",
+          "exec": "fili-photocraft ctl --pid %pid action tool-gradient"
+        },
+        {
+          "label": "Paint Bucket",
+          "exec": "fili-photocraft ctl --pid %pid action tool-bucket"
+        },
+        {
+          "label": "Text",
+          "keys": "T",
+          "exec": "fili-photocraft ctl --pid %pid action tool-text"
+        },
+        {
+          "label": "Rectangle",
+          "keys": "U",
+          "exec": "fili-photocraft ctl --pid %pid action tool-rect"
+        },
+        {
+          "label": "Rounded Rectangle",
+          "exec": "fili-photocraft ctl --pid %pid action tool-rounded"
+        },
+        {
+          "label": "Ellipse",
+          "exec": "fili-photocraft ctl --pid %pid action tool-shapeellipse"
+        },
+        {
+          "label": "Triangle",
+          "exec": "fili-photocraft ctl --pid %pid action tool-triangle"
+        },
+        {
+          "label": "Star",
+          "exec": "fili-photocraft ctl --pid %pid action tool-star"
+        },
+        {
+          "label": "Polygon",
+          "exec": "fili-photocraft ctl --pid %pid action tool-polygon"
+        },
+        {
+          "label": "Line",
+          "exec": "fili-photocraft ctl --pid %pid action tool-line"
+        },
+        {
+          "label": "Eraser",
+          "keys": "E",
+          "exec": "fili-photocraft ctl --pid %pid action tool-eraser"
+        },
+        {
+          "label": "Blur",
+          "keys": "R",
+          "exec": "fili-photocraft ctl --pid %pid action tool-blur"
+        },
+        {
+          "label": "Sharpen",
+          "exec": "fili-photocraft ctl --pid %pid action tool-sharpen"
+        },
+        {
+          "label": "Smudge",
+          "exec": "fili-photocraft ctl --pid %pid action tool-smudge"
+        },
+        {
+          "label": "Dodge",
+          "keys": "O",
+          "exec": "fili-photocraft ctl --pid %pid action tool-dodge"
+        },
+        {
+          "label": "Burn",
+          "exec": "fili-photocraft ctl --pid %pid action tool-burn"
+        },
+        {
+          "label": "Sponge",
+          "exec": "fili-photocraft ctl --pid %pid action tool-sponge"
+        },
         {
           "label": "Hand",
           "keys": "H",

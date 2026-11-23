@@ -72,6 +72,13 @@ ApplicationWindow {
         });
         return out;
     }
+    function selectTool(id) {
+        const i = toolGroups.findIndex(g => g.indexOf(id) >= 0);
+        groupPick = Object.assign({}, groupPick, { [i]: id });
+        tool = id;
+    }
+    // A key: the first tool of its group, or the next one when the group is already in hand
+    function keyTool(key) { pickTool(toolKeys[key]); }
     function pickTool(id) {
         const i = toolGroups.findIndex(g => g.indexOf(id) >= 0);
         const g = toolGroups[i];
@@ -79,7 +86,7 @@ ApplicationWindow {
         groupPick = Object.assign({}, groupPick, { [i]: next });
         tool = next;
     }
-    readonly property var toolKeys: ({ T: "text", U: "rect", V: "move", I: "eyedropper", G: "gradient", H: "hand", Z: "zoom", M: "marquee", L: "lasso", W: "wand", C: "crop", B: "brush", E: "eraser", R: "blur", O: "dodge", J: "heal", Y: "history", S: "stamp" })
+    readonly property var toolKeys: ({ V: "move", I: "eyedropper", G: "bucket", U: "rect", T: "text", H: "hand", Z: "zoom", M: "marquee", L: "lasso", W: "wand", C: "crop", B: "brush", E: "eraser", R: "blur", O: "dodge", J: "heal", Y: "history", S: "stamp" })
     // The tools that draw a stroke: the command of the engine each one runs
     readonly property var strokeTools: ({ brush: "paint.stroke", pencil: "paint.pencil", eraser: "paint.stroke", blur: "paint.blur", sharpen: "paint.sharpen",
         smudge: "paint.smudge", dodge: "paint.dodge", burn: "paint.burn", sponge: "paint.sponge", heal: "paint.spotHealing", history: "paint.historyBrush", stamp: "paint.cloneStamp" })
@@ -146,6 +153,37 @@ ApplicationWindow {
         "open": { on: () => true, run: arg => arg ? canvas.open(arg) : openDialog.open() },
         "undo": { on: () => canvas.canUndo, run: () => { canvas.undo()} },
         "redo": { on: () => canvas.canRedo, run: () => { canvas.redo()} },
+        "tool-move": { on: () => true, run: () => win.selectTool("move") },
+        "tool-eyedropper": { on: () => true, run: () => win.selectTool("eyedropper") },
+        "tool-bucket": { on: () => true, run: () => win.selectTool("bucket") },
+        "tool-gradient": { on: () => true, run: () => win.selectTool("gradient") },
+        "tool-rect": { on: () => true, run: () => win.selectTool("rect") },
+        "tool-rounded": { on: () => true, run: () => win.selectTool("rounded") },
+        "tool-shapeellipse": { on: () => true, run: () => win.selectTool("shapeellipse") },
+        "tool-triangle": { on: () => true, run: () => win.selectTool("triangle") },
+        "tool-star": { on: () => true, run: () => win.selectTool("star") },
+        "tool-polygon": { on: () => true, run: () => win.selectTool("polygon") },
+        "tool-line": { on: () => true, run: () => win.selectTool("line") },
+        "tool-text": { on: () => true, run: () => win.selectTool("text") },
+        "tool-hand": { on: () => true, run: () => win.selectTool("hand") },
+        "tool-zoom": { on: () => true, run: () => win.selectTool("zoom") },
+        "tool-marquee": { on: () => true, run: () => win.selectTool("marquee") },
+        "tool-ellipse": { on: () => true, run: () => win.selectTool("ellipse") },
+        "tool-lasso": { on: () => true, run: () => win.selectTool("lasso") },
+        "tool-wand": { on: () => true, run: () => win.selectTool("wand") },
+        "tool-crop": { on: () => true, run: () => win.selectTool("crop") },
+        "tool-brush": { on: () => true, run: () => win.selectTool("brush") },
+        "tool-pencil": { on: () => true, run: () => win.selectTool("pencil") },
+        "tool-eraser": { on: () => true, run: () => win.selectTool("eraser") },
+        "tool-blur": { on: () => true, run: () => win.selectTool("blur") },
+        "tool-sharpen": { on: () => true, run: () => win.selectTool("sharpen") },
+        "tool-smudge": { on: () => true, run: () => win.selectTool("smudge") },
+        "tool-dodge": { on: () => true, run: () => win.selectTool("dodge") },
+        "tool-burn": { on: () => true, run: () => win.selectTool("burn") },
+        "tool-sponge": { on: () => true, run: () => win.selectTool("sponge") },
+        "tool-heal": { on: () => true, run: () => win.selectTool("heal") },
+        "tool-history": { on: () => true, run: () => win.selectTool("history") },
+        "tool-stamp": { on: () => true, run: () => win.selectTool("stamp") },
         "select-all": { on: () => canvas.loaded, run: () => { canvas.run("select.all", "{}")} },
         "deselect": { on: () => canvas.loaded, run: () => { canvas.run("select.deselect", "{}")} },
         "zoom-in": { on: () => canvas.loaded, run: () => win.zoomStep(1.25) },
@@ -158,7 +196,6 @@ ApplicationWindow {
         "close": { on: () => true, run: () => Qt.quit() }
     })
     function runAction(name, arg) {
-        if (name.startsWith("tool-") && toolInfo[name.slice(5)] !== undefined) { tool = name.slice(5); return { ok: true, error: "" }; }
         const a = actions[name];
         if (!a)
             return { ok: false, error: "unknown action: " + name + " (fili-photocraft ctl actions lists them)" };
@@ -200,10 +237,24 @@ ApplicationWindow {
     Shortcut { sequence: "Ctrl+="; onActivated: win.runAction("zoom-in") }
     Shortcut { sequence: "Ctrl++"; onActivated: win.runAction("zoom-in") }
     Shortcut { sequence: "Ctrl+-"; onActivated: win.runAction("zoom-out") }
-    Repeater {
-        model: Object.keys(win.toolKeys)
-        Item { required property string modelData; Shortcut { sequence: modelData; onActivated: { const id = win.toolKeys[modelData]; const g = win.toolGroups.find(g => g.indexOf(win.tool) >= 0); win.pickTool(g && g.indexOf(id) >= 0 ? win.tool : id); } } }
-    }
+    Shortcut { sequence: "V"; onActivated: win.keyTool("V") }
+    Shortcut { sequence: "I"; onActivated: win.keyTool("I") }
+    Shortcut { sequence: "G"; onActivated: win.keyTool("G") }
+    Shortcut { sequence: "U"; onActivated: win.keyTool("U") }
+    Shortcut { sequence: "T"; onActivated: win.keyTool("T") }
+    Shortcut { sequence: "H"; onActivated: win.keyTool("H") }
+    Shortcut { sequence: "Z"; onActivated: win.keyTool("Z") }
+    Shortcut { sequence: "M"; onActivated: win.keyTool("M") }
+    Shortcut { sequence: "L"; onActivated: win.keyTool("L") }
+    Shortcut { sequence: "W"; onActivated: win.keyTool("W") }
+    Shortcut { sequence: "C"; onActivated: win.keyTool("C") }
+    Shortcut { sequence: "B"; onActivated: win.keyTool("B") }
+    Shortcut { sequence: "E"; onActivated: win.keyTool("E") }
+    Shortcut { sequence: "R"; onActivated: win.keyTool("R") }
+    Shortcut { sequence: "O"; onActivated: win.keyTool("O") }
+    Shortcut { sequence: "J"; onActivated: win.keyTool("J") }
+    Shortcut { sequence: "Y"; onActivated: win.keyTool("Y") }
+    Shortcut { sequence: "S"; onActivated: win.keyTool("S") }
     Shortcut { sequence: "Ctrl+A"; onActivated: win.runAction("select-all") }
     Shortcut { sequence: "Ctrl+D"; onActivated: win.runAction("deselect") }
 

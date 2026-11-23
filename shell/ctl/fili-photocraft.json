@@ -44,6 +44,138 @@
       "keys": "Ctrl+Shift+Z"
     },
     {
+      "name": "tool-move",
+      "label": "Move",
+      "keys": "V"
+    },
+    {
+      "name": "tool-marquee",
+      "label": "Rectangular Marquee",
+      "keys": "M"
+    },
+    {
+      "name": "tool-ellipse",
+      "label": "Elliptical Marquee"
+    },
+    {
+      "name": "tool-lasso",
+      "label": "Lasso",
+      "keys": "L"
+    },
+    {
+      "name": "tool-wand",
+      "label": "Magic Wand",
+      "keys": "W"
+    },
+    {
+      "name": "tool-crop",
+      "label": "Crop",
+      "keys": "C"
+    },
+    {
+      "name": "tool-eyedropper",
+      "label": "Eyedropper",
+      "keys": "I"
+    },
+    {
+      "name": "tool-brush",
+      "label": "Brush",
+      "keys": "B"
+    },
+    {
+      "name": "tool-pencil",
+      "label": "Pencil"
+    },
+    {
+      "name": "tool-stamp",
+      "label": "Clone Stamp",
+      "keys": "S"
+    },
+    {
+      "name": "tool-history",
+      "label": "History Brush",
+      "keys": "Y"
+    },
+    {
+      "name": "tool-heal",
+      "label": "Spot Healing Brush",
+      "keys": "J"
+    },
+    {
+      "name": "tool-gradient",
+      "label": "Gradient",
+      "keys": "G"
+    },
+    {
+      "name": "tool-bucket",
+      "label": "Paint Bucket"
+    },
+    {
+      "name": "tool-text",
+      "label": "Text",
+      "keys": "T"
+    },
+    {
+      "name": "tool-rect",
+      "label": "Rectangle",
+      "keys": "U"
+    },
+    {
+      "name": "tool-rounded",
+      "label": "Rounded Rectangle"
+    },
+    {
+      "name": "tool-shapeellipse",
+      "label": "Ellipse"
+    },
+    {
+      "name": "tool-triangle",
+      "label": "Triangle"
+    },
+    {
+      "name": "tool-star",
+      "label": "Star"
+    },
+    {
+      "name": "tool-polygon",
+      "label": "Polygon"
+    },
+    {
+      "name": "tool-line",
+      "label": "Line"
+    },
+    {
+      "name": "tool-eraser",
+      "label": "Eraser",
+      "keys": "E"
+    },
+    {
+      "name": "tool-blur",
+      "label": "Blur",
+      "keys": "R"
+    },
+    {
+      "name": "tool-sharpen",
+      "label": "Sharpen"
+    },
+    {
+      "name": "tool-smudge",
+      "label": "Smudge"
+    },
+    {
+      "name": "tool-dodge",
+      "label": "Dodge",
+      "keys": "O"
+    },
+    {
+      "name": "tool-burn",
+      "label": "Burn"
+    },
+    {
+      "name": "tool-sponge",
+      "label": "Sponge"
+    },
+    {
       "name": "tool-hand",
       "label": "Hand",
       "keys": "H"
@@ -52,6 +184,16 @@
       "name": "tool-zoom",
       "label": "Zoom",
       "keys": "Z"
+    },
+    {
+      "name": "select-all",
+      "label": "Select All",
+      "keys": "Ctrl+A"
+    },
+    {
+      "name": "deselect",
+      "label": "Deselect",
+      "keys": "Ctrl+D"
     },
     {
       "name": "zoom-in",
