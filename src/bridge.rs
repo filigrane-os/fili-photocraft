@@ -343,7 +343,11 @@ impl qobject::PhotoCanvas {
     /// The rows of the list with the pictures known so far
     fn publish_layers(mut self: Pin<&mut Self>) {
         let mut rows = self.rows.clone();
+        let locks = self.doc.snapshot().map(|d| crate::document::layer_locks(&d)).unwrap_or_default();
         for row in rows.as_array_mut().into_iter().flatten() {
+            if let Some(l) = row["id"].as_u64().and_then(|id| locks.get(&id)) {
+                row["locks"] = l.clone();
+            }
             if let Some(url) = row["id"].as_u64().and_then(|id| self.thumbs.get(&id)) {
                 row["thumbnail"] = serde_json::Value::String(url.clone());
             }

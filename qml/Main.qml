@@ -220,6 +220,20 @@ ApplicationWindow {
                             current: win.activeLayer ? win.activeLayer.blend : "Normal"
                             onPicked: v => win.activeLayer && win.setLayer(win.activeLayer.id, { blend: v })
                         }
+                    Flow {
+                        width: parent.width
+                        spacing: FiliTheme.space3
+                        Text { text: Fili.tr("Lock"); font.family: FiliTheme.font; font.pixelSize: FiliTheme.size; color: FiliTheme.text }
+                        Repeater {
+                            model: [{ key: "transparency", label: "Transparency" }, { key: "pixels", label: "Pixels" }, { key: "position", label: "Position" }, { key: "all", label: "All" }]
+                            FiliCheckBox {
+                                required property var modelData
+                                label: Fili.tr(modelData.label)
+                                checked: win.activeLayer && win.activeLayer.locks ? win.activeLayer.locks[modelData.key] === true : false
+                                onToggled: win.setLayer(win.activeLayer.id, { locks: { [modelData.key]: !checked } })
+                            }
+                        }
+                    }
                     Item {
                         width: parent.width
                         height: opacity.implicitHeight

@@ -96,6 +96,22 @@ pub fn layer_thumbnails(doc: &EngineDocument, side: u32) -> Vec<(u64, u32, u32, 
     out
 }
 
+/// The locks of each layer (`transparency`, `pixels`, `position`, `all`), by layer id: the engine's layer list does not report them
+pub fn layer_locks(doc: &EngineDocument) -> std::collections::HashMap<u64, Value> {
+    fn walk(layers: &[photocraft_engine::doc::Layer], out: &mut std::collections::HashMap<u64, Value>) {
+        for l in layers {
+            let k = l.locks;
+            out.insert(l.id.0 as u64, json!({"transparency": k.transparency, "pixels": k.pixels, "position": k.position, "all": k.all}));
+            if let Some(children) = l.children() {
+                walk(children, out);
+            }
+        }
+    }
+    let mut out = std::collections::HashMap::new();
+    walk(&doc.layers, &mut out);
+    out
+}
+
 /// A 32-bit BMP (Qt reads it with its alpha): lets QML show a picture from a file without an image provider
 pub fn bmp(w: u32, h: u32, rgba: &[u8]) -> Vec<u8> {
     let size = 54 + rgba.len() as u32;
