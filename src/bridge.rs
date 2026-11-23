@@ -95,6 +95,10 @@ pub mod qobject {
         #[qinvokable]
         #[cxx_name = "toDoc"]
         fn to_doc(self: &PhotoCanvas, x: f64, y: f64) -> QString;
+        // The colour of the composite at a point of the document, "#rrggbb" (empty outside)
+        #[qinvokable]
+        #[cxx_name = "pixelAt"]
+        fn pixel_at(self: &PhotoCanvas, x: f64, y: f64) -> QString;
         #[qinvokable]
         #[cxx_name = "toItem"]
         fn to_item(self: &PhotoCanvas, x: f64, y: f64) -> QString;
@@ -479,6 +483,20 @@ impl qobject::PhotoCanvas {
     pub fn viewport(mut self: Pin<&mut Self>, width: f64, height: f64, dpr: f64) {
         self.as_mut().rust_mut().view.set_item(width, height, dpr);
         self.view_changed();
+    }
+
+    pub fn pixel_at(&self, x: f64, y: f64) -> QString {
+        let Some(doc) = self.doc.snapshot() else { return QString::default() };
+        let (x, y) = (x.floor() as i32, y.floor() as i32);
+        let b = doc.bounds();
+        if x < b.x0 || y < b.y0 || x >= b.x1 || y >= b.y1 {
+            return QString::default();
+        }
+        let image = photocraft_compose::render_reduced_rect(&doc, photocraft_engine::doc::Rect::new(x, y, x + 1, y + 1), 1, 1).to_rgba8();
+        match image.pixels.get(0..3) {
+            Some(p) => QString::from(&format!("#{:02x}{:02x}{:02x}", p[0], p[1], p[2])),
+            None => QString::default(),
+        }
     }
 
     pub fn to_item(&self, x: f64, y: f64) -> QString {
