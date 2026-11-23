@@ -111,6 +111,11 @@
       "label": "Paint Bucket"
     },
     {
+      "name": "tool-pen",
+      "label": "Pen",
+      "keys": "P"
+    },
+    {
       "name": "tool-text",
       "label": "Text",
       "keys": "T"

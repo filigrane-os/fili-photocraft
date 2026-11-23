@@ -50,6 +50,7 @@ ApplicationWindow {
         star: { icon: "star", tip: "Star", hint: "U" },
         polygon: { icon: "hexagon", tip: "Polygon", hint: "U" },
         line: { icon: "minus", tip: "Line", hint: "U" },
+        pen: { icon: "pen-tool", tip: "Pen", hint: "P" },
         text: { icon: "type", tip: "Text", hint: "T" },
         hand: { icon: "hand", tip: "Hand", hint: "H" }, zoom: { icon: "zoom-in", tip: "Zoom", hint: "Z" },
         marquee: { icon: "square-dashed", tip: "Rectangular Marquee", hint: "M" }, ellipse: { icon: "circle", tip: "Elliptical Marquee", hint: "M" },
@@ -61,7 +62,7 @@ ApplicationWindow {
         heal: { icon: "bandage", tip: "Spot Healing Brush", hint: "J" }, history: { icon: "history", tip: "History Brush", hint: "Y" }, stamp: { icon: "stamp", tip: "Clone Stamp", hint: "S" }
     })
     readonly property var toolGroups: [
-        ["move"], ["marquee", "ellipse"], ["lasso"], ["wand"], ["crop"], ["eyedropper"], ["brush", "pencil"], ["stamp", "history", "heal"], ["gradient", "bucket"], ["text"], ["rect", "rounded", "shapeellipse", "triangle", "star", "polygon", "line"], ["eraser"], ["blur", "sharpen", "smudge"], ["dodge", "burn", "sponge"], ["hand"], ["zoom"]
+        ["move"], ["marquee", "ellipse"], ["lasso"], ["wand"], ["crop"], ["eyedropper"], ["brush", "pencil"], ["stamp", "history", "heal"], ["gradient", "bucket"], ["pen"], ["text"], ["rect", "rounded", "shapeellipse", "triangle", "star", "polygon", "line"], ["eraser"], ["blur", "sharpen", "smudge"], ["dodge", "burn", "sponge"], ["hand"], ["zoom"]
     ]
     property var groupPick: ({})
     readonly property var toolModel: {
@@ -69,10 +70,17 @@ ApplicationWindow {
         toolGroups.forEach((g, i) => {
             const id = g.indexOf(tool) >= 0 ? tool : (groupPick[i] ?? g[0]);
             const t = toolInfo[id];
-            if (i === 1 || i === 6 || i === 14) out.push({ sep: true });
+            if (i === 1 || i === 6 || i === 15) out.push({ sep: true });
             out.push({ id: id, icon: t.icon, tip: Fili.tr(t.tip), hint: t.hint, variants: g.length > 1 });
         });
         return out;
+    }
+    // Pen: clicks add the corners of a path, Enter or a double click (or a click on the first point) closes it into a shape layer
+    function finishPen() {
+        const pts = penPoints.filter((p, i, a) => i === 0 || Math.hypot(p[0] - a[i - 1][0], p[1] - a[i - 1][1]) > 1);
+        penPoints = [];
+        if (pts.length >= 3)
+            canvas.run("shape.create", JSON.stringify({ kind: "path", fill: brushColor, path: { subpaths: [{ closed: true, knots: pts }] } }));
     }
     function selectTool(id) {
         const i = toolGroups.findIndex(g => g.indexOf(id) >= 0);
@@ -93,7 +101,7 @@ ApplicationWindow {
     readonly property var strokeTools: ({ brush: "paint.stroke", pencil: "paint.pencil", eraser: "paint.stroke", blur: "paint.blur", sharpen: "paint.sharpen",
         smudge: "paint.smudge", dodge: "paint.dodge", burn: "paint.burn", sponge: "paint.sponge", heal: "paint.spotHealing", history: "paint.historyBrush", stamp: "paint.cloneStamp" })
     readonly property bool painting: strokeTools[tool] !== undefined
-    readonly property bool usesColor: shapeTool || tool === "text" || tool === "brush" || tool === "pencil" || tool === "bucket" || tool === "gradient"
+    readonly property bool usesColor: shapeTool || tool === "pen" || tool === "text" || tool === "brush" || tool === "pencil" || tool === "bucket" || tool === "gradient"
     // Clone Stamp: the point sampled with Alt+click and the offset it keeps to the strokes that follow (aligned)
     property var stampSource: null
     property var stampOffset: null
@@ -192,6 +200,7 @@ ApplicationWindow {
         "tool-heal": { on: () => true, run: () => win.selectTool("heal") },
         "tool-history": { on: () => true, run: () => win.selectTool("history") },
         "tool-stamp": { on: () => true, run: () => win.selectTool("stamp") },
+        "tool-pen": { on: () => true, run: () => win.selectTool("pen") },
         "select-all": { on: () => canvas.loaded, run: () => { canvas.run("select.all", "{}")} },
         "deselect": { on: () => canvas.loaded, run: () => { canvas.run("select.deselect", "{}")} },
         "zoom-in": { on: () => canvas.loaded, run: () => win.zoomStep(1.25) },
@@ -263,6 +272,9 @@ ApplicationWindow {
     Shortcut { sequence: "J"; onActivated: win.keyTool("J") }
     Shortcut { sequence: "Y"; onActivated: win.keyTool("Y") }
     Shortcut { sequence: "S"; onActivated: win.keyTool("S") }
+    Shortcut { sequence: "Return"; enabled: win.penPoints.length > 0; onActivated: win.finishPen() }
+    Shortcut { sequence: "Escape"; enabled: win.penPoints.length > 0; onActivated: win.penPoints = [] }
+    Shortcut { sequence: "P"; onActivated: win.keyTool("P") }
     Shortcut { sequence: "Ctrl+A"; onActivated: win.runAction("select-all") }
     Shortcut { sequence: "Ctrl+D"; onActivated: win.runAction("deselect") }
 
@@ -274,7 +286,7 @@ ApplicationWindow {
         closeButton: true
         onCloseRequested: win.runAction("close")
         Text {
-            visible: !win.painting && !win.shapeTool && win.tool !== "text" && !win.dragTools[win.tool] && win.tool !== "lasso" && win.tool !== "wand"
+            visible: !win.painting && !win.shapeTool && win.tool !== "text" && win.tool !== "pen" && !win.dragTools[win.tool] && win.tool !== "lasso" && win.tool !== "wand"
             text: win.tool === "zoom" ? Fili.tr("Click to zoom in, Alt+click to zoom out") : Fili.tr("Drag to move the image")
             font.family: FiliTheme.font
             font.pixelSize: FiliTheme.size
@@ -297,11 +309,11 @@ ApplicationWindow {
             }
         }
         Row {
-            visible: win.shapeTool
+            visible: win.shapeTool || win.tool === "pen"
             spacing: FiliTheme.space3
             Text { anchors.verticalCenter: parent.verticalCenter; text: Fili.tr("Drag to draw a shape in the colour of") ; font.family: FiliTheme.font; font.pixelSize: FiliTheme.size; color: FiliTheme.textSecondary }
             Repeater {
-                model: win.shapeTool ? ["#000000", "#ffffff", "#e0605a", "#5cc06a", "#5a8fe0", "#e8c547"] : []
+                model: win.shapeTool || win.tool === "pen" ? ["#000000", "#ffffff", "#e0605a", "#5cc06a", "#5a8fe0", "#e8c547"] : []
                 Rectangle {
                     required property string modelData
                     anchors.verticalCenter: parent.verticalCenter
@@ -319,8 +331,8 @@ ApplicationWindow {
             Text { anchors.verticalCenter: parent.verticalCenter; text: win.tool === "wand" ? Fili.tr("Shift adds to the selection, Alt subtracts") : ""; font.family: FiliTheme.font; font.pixelSize: FiliTheme.size; color: FiliTheme.textSecondary }
         }
         Text {
-            visible: win.tool === "marquee" || win.tool === "ellipse" || win.tool === "lasso" || win.tool === "crop"
-            text: win.tool === "crop" ? Fili.tr("Drag the area to keep") : Fili.tr("Drag to select, click to deselect")
+            visible: win.tool === "marquee" || win.tool === "ellipse" || win.tool === "lasso" || win.tool === "crop" || win.tool === "pen"
+            text: win.tool === "pen" ? Fili.tr("Click to add points, Enter or double-click to close the shape, Esc to cancel") : win.tool === "crop" ? Fili.tr("Drag the area to keep") : Fili.tr("Drag to select, click to deselect")
             font.family: FiliTheme.font; font.pixelSize: FiliTheme.size; color: FiliTheme.textSecondary
         }
         Row {
@@ -655,6 +667,11 @@ ApplicationWindow {
                 last = Qt.point(e.x, e.y);
                 if (win.dragTools[win.tool] && e.button === Qt.LeftButton) win.drag = Qt.rect(e.x, e.y, 0, 0);
                 if ((win.tool === "lasso" || win.tool === "gradient" || win.tool === "line") && e.button === Qt.LeftButton) win.lasso = [Qt.point(e.x, e.y)];
+                if (win.tool === "pen" && e.button === Qt.LeftButton) {
+                    const f = win.penPoints[0], first = f ? JSON.parse(canvas.toItem(f[0], f[1])) : null;
+                    if (first && win.penPoints.length >= 3 && Math.hypot(e.x - first[0], e.y - first[1]) < 8) win.finishPen();
+                    else win.penPoints = win.penPoints.concat([JSON.parse(canvas.toDoc(e.x, e.y))]);
+                }
                 if (win.tool === "text" && e.button === Qt.LeftButton) { win.textAt = { x: e.x, y: e.y, doc: JSON.parse(canvas.toDoc(e.x, e.y)) }; textInput.text = ""; textInput.forceActiveFocus(); }
                 if (win.tool === "move" && e.button === Qt.LeftButton && win.activeLayer) win.moveFrom = JSON.parse(canvas.toDoc(e.x, e.y));
                 if (win.tool === "eyedropper" && e.button === Qt.LeftButton) {
@@ -732,7 +749,7 @@ ApplicationWindow {
                 }
             }
             onClicked: e => { if (win.tool === "zoom") canvas.zoomAt(e.modifiers & Qt.AltModifier ? 1 / 1.5 : 1.5, e.x, e.y); }
-            onDoubleClicked: if (win.tool === "hand") canvas.zoomFit()
+            onDoubleClicked: { if (win.tool === "hand") canvas.zoomFit(); else if (win.tool === "pen") win.finishPen(); }
             onWheel: e => canvas.zoomAt(Math.pow(1.0015, e.angleDelta.y), e.x, e.y)
         }
         // The outline of the selection (dashed, over the image) and of the rectangle being dragged
@@ -755,6 +772,26 @@ ApplicationWindow {
                 if (text !== "" && win.textAt)
                     canvas.run("type.create", JSON.stringify({ x: Math.round(win.textAt.doc[0]), y: Math.round(win.textAt.doc[1]), text: text, size: win.textSize, color: win.brushColor }));
                 win.textAt = null;
+            }
+        }
+        Canvas {
+            id: penPath
+            anchors.fill: parent
+            visible: win.penPoints.length > 0
+            Connections { target: win; function onPenPointsChanged() { penPath.requestPaint(); } }
+            Connections { target: canvas; function onViewKeyChanged() { penPath.requestPaint(); } }
+            onVisibleChanged: requestPaint()
+            onPaint: {
+                const c = getContext("2d");
+                c.reset();
+                if (win.penPoints.length === 0) return;
+                c.strokeStyle = FiliTheme.accentColor.toString();
+                c.fillStyle = FiliTheme.accentColor.toString();
+                c.lineWidth = 1;
+                c.beginPath();
+                win.penPoints.forEach((p, i) => { const q = JSON.parse(canvas.toItem(p[0], p[1])); if (i === 0) c.moveTo(q[0], q[1]); else c.lineTo(q[0], q[1]); });
+                c.stroke();
+                win.penPoints.forEach(p => { const q = JSON.parse(canvas.toItem(p[0], p[1])); c.fillRect(q[0] - 2, q[1] - 2, 5, 5); });
             }
         }
         Canvas {

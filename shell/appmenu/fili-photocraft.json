@@ -171,6 +171,11 @@
           "exec": "fili-photocraft ctl --pid %pid action tool-bucket"
         },
         {
+          "label": "Pen",
+          "keys": "P",
+          "exec": "fili-photocraft ctl --pid %pid action tool-pen"
+        },
+        {
           "label": "Text",
           "keys": "T",
           "exec": "fili-photocraft ctl --pid %pid action tool-text"

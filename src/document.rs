@@ -252,6 +252,7 @@ pub fn probe(file: &str) -> i32 {
         ("paint.bucket", json!({"x": 10, "y": 10, "tolerance": 32, "color": "#0000ff"})),
         ("paint.gradient", json!({"from": [0, 0], "to": [100, 100], "colors": ["#ff0000", "#ffffff"]})),
         ("shape.create", json!({"kind": "star", "rect": [10, 10, 80, 80], "fill": "#e0605a"})),
+        ("shape.create", json!({"kind": "path", "fill": "#336699", "path": {"subpaths": [{"closed": true, "knots": [[10, 10], [80, 20], [40, 70]]}]}})),
         ("shape.create", json!({"kind": "line", "from": [0, 0], "to": [90, 90], "weight": 4, "stroke": {"color": "#000000", "width": 4}, "fill": null})),
         ("type.create", json!({"x": 20, "y": 60, "text": "Hi", "size": 24, "color": "#ffffff"})),
         ("layer.translate", json!({"dx": 5, "dy": 3})),
