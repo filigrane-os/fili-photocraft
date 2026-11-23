@@ -404,8 +404,52 @@ ApplicationWindow {
         model: win.toolModel
     }
 
+    // The strip of panel icons (PhotoCraft): a click shows the panel, a click on the one in view hides the dock
+    property bool dockOpen: true
+    function showPanel(group, index) {
+        if (dockOpen && ((group === 0 && propertiesTab === index) || (group === 1 && layersTab === index))) { dockOpen = false; return; }
+        dockOpen = true;
+        if (group === 0) propertiesTab = index; else layersTab = index;
+    }
+    Rectangle {
+        id: panelBar
+        anchors { right: win.dockOpen ? dock.left : parent.right; top: optionsBar.bottom; bottom: debug.top }
+        width: 36
+        color: FiliTheme.background
+        Rectangle { anchors { top: parent.top; bottom: parent.bottom; left: parent.left } width: FiliTheme.borderWidth; color: FiliTheme.border }
+        Column {
+            anchors { top: parent.top; topMargin: FiliTheme.space2; horizontalCenter: parent.horizontalCenter }
+            spacing: 2
+            Repeater {
+                model: [
+                    { glyph: "sliders-horizontal", tip: "Properties", group: 0, index: 0 }, { glyph: "compass", tip: "Navigator", group: 0, index: 3 },
+                    { glyph: "palette", tip: "Color", group: 0, index: 2 }, { glyph: "layers", tip: "Layers", group: 1, index: 0 }, { glyph: "history", tip: "History", group: 1, index: 3 }
+                ]
+                Rectangle {
+                    id: panelButton
+                    required property var modelData
+                    readonly property bool on: win.dockOpen && (modelData.group === 0 ? win.propertiesTab === modelData.index : win.layersTab === modelData.index)
+                    width: 30; height: 30; radius: FiliTheme.radiusControl
+                    color: on ? FiliTheme.surfaceActive : area.containsMouse ? FiliTheme.surfaceHover : "transparent"
+                    Accessible.role: Accessible.Button
+                    Accessible.name: Fili.tr(modelData.tip)
+                    FiliIcon { anchors.centerIn: parent; size: 16; name: panelButton.modelData.glyph; color: panelButton.on ? FiliTheme.accentColor : FiliTheme.textSecondary }
+                    MouseArea {
+                        id: area
+                        anchors.fill: parent
+                        hoverEnabled: true
+                        onClicked: win.showPanel(panelButton.modelData.group, panelButton.modelData.index)
+                        onEntered: win.showTip(panelButton, Fili.tr(panelButton.modelData.tip))
+                        onExited: win.hideTip(panelButton)
+                    }
+                }
+            }
+        }
+    }
+
     FiliDock {
         id: dock
+        visible: win.dockOpen
         anchors { right: parent.right; top: optionsBar.bottom; bottom: debug.top }
         FiliDockGroup {
             Layout.fillWidth: true
@@ -742,14 +786,14 @@ ApplicationWindow {
     // Tab of the document over the canvas
     FiliTabBar {
         id: documentTab
-        anchors { left: toolStrip.right; right: dock.left; top: optionsBar.bottom }
+        anchors { left: toolStrip.right; right: panelBar.left; top: optionsBar.bottom }
         height: implicitHeight
         closable: false
         detachable: false
         model: canvas.loaded ? [canvas.title] : []
     }
     Rectangle {
-        anchors { left: toolStrip.right; right: dock.left; top: documentTab.bottom; bottom: debug.top }
+        anchors { left: toolStrip.right; right: panelBar.left; top: documentTab.bottom; bottom: debug.top }
         id: canvasArea
         color: FiliTheme.backgroundDeep
 
