@@ -276,6 +276,11 @@
       "name": "close",
       "label": "Close",
       "keys": "Ctrl+W"
+    },
+    {
+      "name": "debug",
+      "label": "Debug Logs",
+      "keys": "Ctrl+Shift+L"
     }
   ]
 }

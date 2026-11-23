@@ -222,6 +222,7 @@ ApplicationWindow {
         "tool-history": { on: () => true, run: () => win.selectTool("history") },
         "tool-stamp": { on: () => true, run: () => win.selectTool("stamp") },
         "tool-pen": { on: () => true, run: () => win.selectTool("pen") },
+        "debug": { on: () => true, run: () => debug.open = !debug.open },
         "select-all": { on: () => canvas.loaded, run: () => { canvas.run("select.all", "{}")} },
         "deselect": { on: () => canvas.loaded, run: () => { canvas.run("select.deselect", "{}")} },
         "zoom-in": { on: () => canvas.loaded, run: () => win.zoomStep(1.25) },
@@ -306,6 +307,7 @@ ApplicationWindow {
     Shortcut { sequence: "Return"; enabled: win.penPoints.length > 0; onActivated: win.finishPen() }
     Shortcut { sequence: "Escape"; enabled: win.penPoints.length > 0; onActivated: win.penPoints = [] }
     Shortcut { sequence: "P"; onActivated: win.keyTool("P") }
+    Shortcut { sequence: "Ctrl+Shift+L"; onActivated: win.runAction("debug") }
     Shortcut { sequence: "Ctrl+A"; onActivated: win.runAction("select-all") }
     Shortcut { sequence: "Ctrl+D"; onActivated: win.runAction("deselect") }
 
@@ -390,7 +392,7 @@ ApplicationWindow {
 
     FiliToolStrip {
         id: toolStrip
-        anchors { left: parent.left; top: optionsBar.bottom; bottom: footer.top }
+        anchors { left: parent.left; top: optionsBar.bottom; bottom: debug.top }
         current: win.tool
         onPicked: id => win.pickTool(id)
         swatches: false
@@ -399,7 +401,7 @@ ApplicationWindow {
 
     FiliDock {
         id: dock
-        anchors { right: parent.right; top: optionsBar.bottom; bottom: footer.top }
+        anchors { right: parent.right; top: optionsBar.bottom; bottom: debug.top }
         FiliDockGroup {
             Layout.fillWidth: true
             Layout.preferredHeight: win.curvesShown || win.propertiesTab === 2 || win.adjustmentSliders.length > 3 ? 440 : win.adjustmentSliders.length > 0 ? 300 : 200
@@ -706,7 +708,7 @@ ApplicationWindow {
         model: [canvas.title]
     }
     Rectangle {
-        anchors { left: toolStrip.right; right: dock.left; top: documentTab.bottom; bottom: footer.top }
+        anchors { left: toolStrip.right; right: dock.left; top: documentTab.bottom; bottom: debug.top }
         color: FiliTheme.backgroundDeep
 
         PhotoCanvas {
@@ -895,6 +897,12 @@ ApplicationWindow {
             anchors.fill: parent
             onDropped: drop => { if (drop.hasUrls) { canvas.open(drop.urls[0].toString()); drop.accept(); } }
         }
+    }
+
+    // Debug panel (View > Debug Logs, Ctrl+Shift+L): the log of the window above the footer
+    FiliDebugPanel {
+        id: debug
+        anchors { bottom: footer.top; left: parent.left; right: parent.right }
     }
 
     // Status bar of PhotoCraft: zoom, size, layers on the left; the label of the hovered tool or the render time on the right

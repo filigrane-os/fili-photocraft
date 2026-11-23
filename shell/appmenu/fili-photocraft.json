@@ -137,6 +137,11 @@
           "label": "Actual Size",
           "keys": "Ctrl+1",
           "exec": "fili-photocraft ctl --pid %pid action zoom-actual"
+        },
+        {
+          "label": "Debug Logs",
+          "keys": "Ctrl+Shift+L",
+          "exec": "fili-photocraft ctl --pid %pid action debug"
         }
       ]
     },

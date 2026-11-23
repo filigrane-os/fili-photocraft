@@ -1,6 +1,7 @@
 // fili-photocraft: the image editor of Filigrane, a Qt Quick window (Fili.UI) on the PhotoCraft engine.
 use fili_ui as _;
 
+mod logs;
 mod bridge;
 mod ctl;
 mod document;
@@ -38,6 +39,9 @@ fn main() {
         }
         _ => {}
     }
+    // The log of the window (Debug panel, View > Debug Logs); QML errors become incidents (fili-incident)
+    logs::init("fili-photocraft", "filigrane-os/filigrane", env!("CARGO_PKG_VERSION"), theme::incidents_on());
+    logs::capture_qt();
     let mut app = QGuiApplication::new();
     // Wayland app-id (niri rules, the .desktop file)
     QGuiApplication::set_desktop_file_name(&QString::from("fili-photocraft"));
