@@ -56,6 +56,8 @@ pub mod qobject {
         #[qproperty(QString, timing, READ, NOTIFY = changed)]
         #[qproperty(QString, error, READ, NOTIFY = changed)]
         #[qproperty(QString, layers, READ, NOTIFY = changed)]
+        // Bounding box of the selection as JSON [x, y, width, height], empty when nothing is selected
+        #[qproperty(QString, selection, READ, NOTIFY = changed)]
         #[qproperty(bool, loaded, READ, NOTIFY = changed)]
         #[qproperty(bool, can_undo, cxx_name = "canUndo", READ, NOTIFY = changed)]
         #[qproperty(bool, can_redo, cxx_name = "canRedo", READ, NOTIFY = changed)]
@@ -265,6 +267,7 @@ pub struct PhotoCanvasRust {
     timing: QString,
     error: QString,
     layers: QString,
+    selection: QString,
     loaded: bool,
     can_undo: bool,
     can_redo: bool,
@@ -335,6 +338,7 @@ impl qobject::PhotoCanvas {
         let count = layers.as_array().map_or(0, Vec::len);
         let info = format!("{} × {} · {count} {}", detail["width"], detail["height"], if count == 1 { "layer" } else { "layers" });
         let (w, h) = (detail["width"].as_f64().unwrap_or(0.0), detail["height"].as_f64().unwrap_or(0.0));
+        let bounds = self.doc.selection_bounds();
         {
             let mut r = self.as_mut().rust_mut();
             r.view.keep_document(w, h);
@@ -343,6 +347,7 @@ impl qobject::PhotoCanvas {
             r.info = QString::from(&info);
             r.error = QString::from(&error.unwrap_or_default());
             r.rows = layers;
+            r.selection = QString::from(&bounds.map(|b| format!("{b:?}")).unwrap_or_default());
             r.loaded = !detail.as_object().is_none_or(|o| o.is_empty());
             r.can_undo = detail["canUndo"].as_bool().unwrap_or(false);
             r.can_redo = detail["canRedo"].as_bool().unwrap_or(false);

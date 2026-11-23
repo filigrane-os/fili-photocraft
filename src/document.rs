@@ -46,6 +46,13 @@ impl Document {
         }
     }
 
+    /// The bounding box of the selection, `[x, y, width, height]` in pixels (None when nothing is selected)
+    pub fn selection_bounds(&self) -> Option<[i32; 4]> {
+        let doc = self.session.as_ref().and_then(|s| s.active())?.doc.clone();
+        let r = doc.selection.as_ref()?.content_bounds();
+        (r.width() > 0 && r.height() > 0).then(|| [r.x0, r.y0, r.width() as i32, r.height() as i32])
+    }
+
     /// The document for the render thread: the engine keeps it in an `Arc`, so this copies no pixels
     pub fn snapshot(&self) -> Option<Arc<EngineDocument>> {
         self.session.as_ref().and_then(|s| s.active()).map(|state| state.doc.clone())

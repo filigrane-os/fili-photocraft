@@ -40,7 +40,8 @@ ApplicationWindow {
     // Every tool (icon, name, key) and the groups the strip shows: one button per group, a click on the tool in hand goes to the next one
     readonly property var toolInfo: ({
         hand: { icon: "hand", tip: "Hand", hint: "H" }, zoom: { icon: "zoom-in", tip: "Zoom", hint: "Z" },
-        marquee: { icon: "square-dashed", tip: "Rectangular Marquee", hint: "M" },
+        marquee: { icon: "square-dashed", tip: "Rectangular Marquee", hint: "M" }, ellipse: { icon: "circle", tip: "Elliptical Marquee", hint: "M" },
+        lasso: { icon: "lasso", tip: "Lasso", hint: "L" }, wand: { icon: "wand", tip: "Magic Wand", hint: "W" }, crop: { icon: "crop", tip: "Crop", hint: "C" },
         brush: { icon: "brush", tip: "Brush", hint: "B" }, pencil: { icon: "pencil", tip: "Pencil", hint: "B" },
         eraser: { icon: "eraser", tip: "Eraser", hint: "E" },
         blur: { icon: "droplet", tip: "Blur", hint: "R" }, sharpen: { icon: "triangle", tip: "Sharpen", hint: "R" }, smudge: { icon: "pointer", tip: "Smudge", hint: "R" },
@@ -48,7 +49,7 @@ ApplicationWindow {
         heal: { icon: "bandage", tip: "Spot Healing Brush", hint: "J" }, history: { icon: "history", tip: "History Brush", hint: "Y" }, stamp: { icon: "stamp", tip: "Clone Stamp", hint: "S" }
     })
     readonly property var toolGroups: [
-        ["marquee"], ["brush", "pencil"], ["stamp", "history", "heal"], ["eraser"], ["blur", "sharpen", "smudge"], ["dodge", "burn", "sponge"], ["hand"], ["zoom"]
+        ["marquee", "ellipse"], ["lasso"], ["wand"], ["crop"], ["brush", "pencil"], ["stamp", "history", "heal"], ["eraser"], ["blur", "sharpen", "smudge"], ["dodge", "burn", "sponge"], ["hand"], ["zoom"]
     ]
     property var groupPick: ({})
     readonly property var toolModel: {
@@ -56,7 +57,7 @@ ApplicationWindow {
         toolGroups.forEach((g, i) => {
             const id = g.indexOf(tool) >= 0 ? tool : (groupPick[i] ?? g[0]);
             const t = toolInfo[id];
-            if (i === 3 || i === 6) out.push({ sep: true });
+            if (i === 4 || i === 9) out.push({ sep: true });
             out.push({ id: id, icon: t.icon, tip: Fili.tr(t.tip), hint: t.hint, variants: g.length > 1 });
         });
         return out;
@@ -68,7 +69,7 @@ ApplicationWindow {
         groupPick = Object.assign({}, groupPick, { [i]: next });
         tool = next;
     }
-    readonly property var toolKeys: ({ H: "hand", Z: "zoom", M: "marquee", B: "brush", E: "eraser", R: "blur", O: "dodge", J: "heal", Y: "history", S: "stamp" })
+    readonly property var toolKeys: ({ H: "hand", Z: "zoom", M: "marquee", L: "lasso", W: "wand", C: "crop", B: "brush", E: "eraser", R: "blur", O: "dodge", J: "heal", Y: "history", S: "stamp" })
     // The tools that draw a stroke: the command of the engine each one runs
     readonly property var strokeTools: ({ brush: "paint.stroke", pencil: "paint.pencil", eraser: "paint.stroke", blur: "paint.blur", sharpen: "paint.sharpen",
         smudge: "paint.smudge", dodge: "paint.dodge", burn: "paint.burn", sponge: "paint.sponge", heal: "paint.spotHealing", history: "paint.historyBrush", stamp: "paint.cloneStamp" })
@@ -91,8 +92,11 @@ ApplicationWindow {
         return JSON.stringify(p);
     }
     // The rectangular selection in document pixels ({x, y, w, h}) and the one being dragged out (item coordinates), for the outline
-    property var marquee: null
+    readonly property var marquee: { try { const b = JSON.parse(canvas.selection); return { x: b[0], y: b[1], w: b[2], h: b[3] }; } catch (e) { return null; } }
     property var drag: null
+    property var lasso: []
+    property int wandTolerance: 32
+    readonly property var dragTools: ({ marquee: 1, ellipse: 1, crop: 1 })
     function itemRect(m) {
         const a = JSON.parse(canvas.toItem(m.x, m.y)), b = JSON.parse(canvas.toItem(m.x + m.w, m.y + m.h));
         return Qt.rect(a[0], a[1], b[0] - a[0], b[1] - a[1]);
@@ -122,10 +126,10 @@ ApplicationWindow {
     readonly property var actions: ({
         "about": { on: () => true, run: () => about.visible ? about.close() : about.show() },
         "open": { on: () => true, run: arg => arg ? canvas.open(arg) : openDialog.open() },
-        "undo": { on: () => canvas.canUndo, run: () => { canvas.undo(); win.marquee = null; } },
-        "redo": { on: () => canvas.canRedo, run: () => { canvas.redo(); win.marquee = null; } },
-        "select-all": { on: () => canvas.loaded, run: () => { canvas.run("select.all", "{}"); win.marquee = null; } },
-        "deselect": { on: () => canvas.loaded, run: () => { canvas.run("select.deselect", "{}"); win.marquee = null; } },
+        "undo": { on: () => canvas.canUndo, run: () => { canvas.undo()} },
+        "redo": { on: () => canvas.canRedo, run: () => { canvas.redo()} },
+        "select-all": { on: () => canvas.loaded, run: () => { canvas.run("select.all", "{}")} },
+        "deselect": { on: () => canvas.loaded, run: () => { canvas.run("select.deselect", "{}")} },
         "zoom-in": { on: () => canvas.loaded, run: () => win.zoomStep(1.25) },
         "zoom-out": { on: () => canvas.loaded, run: () => win.zoomStep(0.8) },
         "zoom-fit": { on: () => canvas.loaded, run: () => canvas.zoomFit() },
@@ -193,11 +197,23 @@ ApplicationWindow {
         closeButton: true
         onCloseRequested: win.runAction("close")
         Text {
-            visible: !win.painting
+            visible: !win.painting && !win.dragTools[win.tool] && win.tool !== "lasso" && win.tool !== "wand"
             text: win.tool === "zoom" ? Fili.tr("Click to zoom in, Alt+click to zoom out") : Fili.tr("Drag to move the image")
             font.family: FiliTheme.font
             font.pixelSize: FiliTheme.size
             color: FiliTheme.textSecondary
+        }
+        Row {
+            visible: win.tool === "wand"
+            spacing: FiliTheme.space3
+            Text { anchors.verticalCenter: parent.verticalCenter; text: Fili.tr("Tolerance") + " " + win.wandTolerance; font.family: FiliTheme.font; font.pixelSize: FiliTheme.size; color: FiliTheme.text }
+            FiliSlider { width: 160; anchors.verticalCenter: parent.verticalCenter; value: win.wandTolerance / 255; onMoved: v => win.wandTolerance = Math.round(v * 255) }
+            Text { anchors.verticalCenter: parent.verticalCenter; text: Fili.tr("Shift adds to the selection, Alt subtracts"); font.family: FiliTheme.font; font.pixelSize: FiliTheme.size; color: FiliTheme.textSecondary }
+        }
+        Text {
+            visible: win.tool === "marquee" || win.tool === "ellipse" || win.tool === "lasso" || win.tool === "crop"
+            text: win.tool === "crop" ? Fili.tr("Drag the area to keep") : Fili.tr("Drag to select, click to deselect")
+            font.family: FiliTheme.font; font.pixelSize: FiliTheme.size; color: FiliTheme.textSecondary
         }
         Row {
             visible: win.painting
@@ -415,7 +431,7 @@ ApplicationWindow {
             anchors.fill: parent
             enabled: canvas.loaded
             acceptedButtons: Qt.LeftButton | Qt.MiddleButton
-            cursorShape: win.painting || win.tool === "zoom" ? Qt.CrossCursor : pressed ? Qt.ClosedHandCursor : Qt.OpenHandCursor
+            cursorShape: win.painting || win.tool === "zoom" || win.dragTools[win.tool] || win.tool === "lasso" || win.tool === "wand" ? Qt.CrossCursor : pressed ? Qt.ClosedHandCursor : Qt.OpenHandCursor
             property point last
             function addPoint(e) {
                 win.stroke = win.stroke.concat([JSON.parse(canvas.toDoc(e.x, e.y))]);
@@ -423,7 +439,12 @@ ApplicationWindow {
             }
             onPressed: e => {
                 last = Qt.point(e.x, e.y);
-                if (win.tool === "marquee" && e.button === Qt.LeftButton) win.drag = Qt.rect(e.x, e.y, 0, 0);
+                if (win.dragTools[win.tool] && e.button === Qt.LeftButton) win.drag = Qt.rect(e.x, e.y, 0, 0);
+                if (win.tool === "lasso" && e.button === Qt.LeftButton) win.lasso = [Qt.point(e.x, e.y)];
+                if (win.tool === "wand" && e.button === Qt.LeftButton) {
+                    const p = JSON.parse(canvas.toDoc(e.x, e.y));
+                    canvas.run("select.magicWand", JSON.stringify({ x: Math.round(p[0]), y: Math.round(p[1]), tolerance: win.wandTolerance, mode: e.modifiers & Qt.ShiftModifier ? "add" : e.modifiers & Qt.AltModifier ? "subtract" : "replace" }));
+                }
                 if (win.tool === "stamp" && e.button === Qt.LeftButton && e.modifiers & Qt.AltModifier) {
                     win.stampSource = JSON.parse(canvas.toDoc(e.x, e.y)); win.stampOffset = null;
                 } else if (win.painting && e.button === Qt.LeftButton && win.activeLayer) { win.stroke = []; addPoint(e); }
@@ -434,12 +455,19 @@ ApplicationWindow {
                     win.drag = null;
                     const r = { x: Math.round(Math.min(a[0], b[0])), y: Math.round(Math.min(a[1], b[1])), w: Math.round(Math.abs(b[0] - a[0])), h: Math.round(Math.abs(b[1] - a[1])) };
                     if (r.w > 0 && r.h > 0) {
-                        canvas.run("select.rect", JSON.stringify({ x: r.x, y: r.y, width: r.w, height: r.h }));
-                        win.marquee = r;
-                    } else {
+                        const cmd = win.tool === "crop" ? "image.crop" : "select.rect";
+                        const params = { x: r.x, y: r.y, width: r.w, height: r.h };
+                        if (win.tool === "ellipse") params.ellipse = true;
+                        canvas.run(cmd, JSON.stringify(params));
+                        if (win.tool === "crop") canvas.zoomFit();
+                    } else if (win.tool !== "crop") {
                         canvas.run("select.deselect", "{}");
-                        win.marquee = null;
                     }
+                }
+                if (win.lasso.length > 0) {
+                    const pts = win.lasso.map(p => JSON.parse(canvas.toDoc(p.x, p.y)));
+                    win.lasso = [];
+                    if (pts.length >= 3) canvas.run("select.lasso", JSON.stringify({ points: pts })); else canvas.run("select.deselect", "{}");
                 }
                 if (win.stroke.length > 0) {
                     canvas.endPreview();
@@ -449,6 +477,7 @@ ApplicationWindow {
             }
             onPositionChanged: e => {
                 if (win.drag) win.drag = Qt.rect(win.drag.x, win.drag.y, e.x - win.drag.x, e.y - win.drag.y);
+                if (win.lasso.length > 0 && pressedButtons & Qt.LeftButton) win.lasso = win.lasso.concat([Qt.point(e.x, e.y)]);
                 if (win.stroke.length > 0 && pressedButtons & Qt.LeftButton) addPoint(e);
                 if (win.tool === "hand" || pressedButtons & Qt.MiddleButton) {
                     canvas.panBy(e.x - last.x, e.y - last.y);
@@ -466,6 +495,24 @@ ApplicationWindow {
             x: r ? r.x : 0; y: r ? r.y : 0; width: r ? r.width : 0; height: r ? r.height : 0
             color: "transparent"
             border { width: 1; color: FiliTheme.accentColor }
+        }
+        Canvas {
+            id: lassoPath
+            anchors.fill: parent
+            visible: win.lasso.length > 0
+            onVisibleChanged: requestPaint()
+            Connections { target: win; function onLassoChanged() { lassoPath.requestPaint(); } }
+            onPaint: {
+                const c = getContext("2d");
+                c.reset();
+                if (win.lasso.length < 2) return;
+                c.strokeStyle = FiliTheme.accentColor.toString();
+                c.lineWidth = 1;
+                c.beginPath();
+                c.moveTo(win.lasso[0].x, win.lasso[0].y);
+                for (let i = 1; i < win.lasso.length; i++) c.lineTo(win.lasso[i].x, win.lasso[i].y);
+                c.stroke();
+            }
         }
         Text {
             anchors.centerIn: parent
