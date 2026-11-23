@@ -439,6 +439,7 @@ ApplicationWindow {
                             anchors.horizontalCenter: parent.horizontalCenter
                             points: win.curvePoints
                             samples: win.curveSamples
+                            histogram: { canvas.layers; return win.curvesShown ? JSON.parse(canvas.histogram(win.curveChannel)) : []; }
                             curveColor: win.channelColors[win.curveChannel]
                             onPointsMoved: p => {
                                 win.curveSamples = JSON.parse(canvas.curveSamples(JSON.stringify(p)))
@@ -701,11 +702,10 @@ ApplicationWindow {
     FiliTabBar {
         id: documentTab
         anchors { left: toolStrip.right; right: dock.left; top: optionsBar.bottom }
-        visible: canvas.loaded
-        height: canvas.loaded ? 40 : 0
+        height: implicitHeight
         closable: false
         detachable: false
-        model: [canvas.title]
+        model: canvas.loaded ? [canvas.title] : []
     }
     Rectangle {
         anchors { left: toolStrip.right; right: dock.left; top: documentTab.bottom; bottom: debug.top }

@@ -138,6 +138,9 @@ pub mod qobject {
         #[cxx_name = "toDoc"]
         fn to_doc(self: &PhotoCanvas, x: f64, y: f64) -> QString;
         // The colour of the composite at a point of the document, "#rrggbb" (empty outside)
+        // Histogram of the picture for the graph of the curves: 256 values 0..1 (channel "points" is the luminosity, or "red", "green", "blue")
+        #[qinvokable]
+        fn histogram(self: &PhotoCanvas, channel: &QString) -> QString;
         #[qinvokable]
         #[cxx_name = "pixelAt"]
         fn pixel_at(self: &PhotoCanvas, x: f64, y: f64) -> QString;
@@ -612,6 +615,31 @@ impl qobject::PhotoCanvas {
     pub fn viewport(mut self: Pin<&mut Self>, width: f64, height: f64, dpr: f64) {
         self.as_mut().rust_mut().view.set_item(width, height, dpr);
         self.view_changed();
+    }
+
+    pub fn histogram(&self, channel: &QString) -> QString {
+        let Some(doc) = self.doc.snapshot() else { return QString::from("[]") };
+        let image = photocraft_compose::thumbnail(&doc, 400);
+        let channel = channel.to_string();
+        let mut bins = [0u32; 256];
+        for p in image.pixels.chunks_exact(4) {
+            if p[3] == 0 {
+                continue;
+            }
+            let v = match channel.as_str() {
+                "red" => p[0] as u32,
+                "green" => p[1] as u32,
+                "blue" => p[2] as u32,
+                _ => (p[0] as u32 * 299 + p[1] as u32 * 587 + p[2] as u32 * 114) / 1000,
+            };
+            bins[v.min(255) as usize] += 1;
+        }
+        // The tallest bin would flatten the rest: the graph is scaled to the 99th percentile
+        let mut sorted = bins;
+        sorted.sort_unstable();
+        let top = (sorted[252] as f32).max(1.0);
+        let values: Vec<f32> = bins.iter().map(|&b| (b as f32 / top).min(1.0)).collect();
+        QString::from(&json!(values).to_string())
     }
 
     pub fn pixel_at(&self, x: f64, y: f64) -> QString {
