@@ -187,8 +187,14 @@ ApplicationWindow {
                             points: win.curvePoints
                             samples: win.curveSamples
                             curveColor: win.channelColors[win.curveChannel]
-                            onPointsMoved: p => win.curveSamples = JSON.parse(canvas.curveSamples(JSON.stringify(p)))
-                            onPointsCommitted: p => canvas.run("layer.setAdjustment", JSON.stringify(Object.assign({ layer: win.activeLayer.id }, { [win.curveChannel]: p })))
+                            onPointsMoved: p => {
+                                win.curveSamples = JSON.parse(canvas.curveSamples(JSON.stringify(p)))
+                                canvas.preview("layer.setAdjustment", JSON.stringify(Object.assign({ layer: win.activeLayer.id }, { [win.curveChannel]: p })))
+                            }
+                            onPointsCommitted: p => {
+                                canvas.endPreview()
+                                canvas.run("layer.setAdjustment", JSON.stringify(Object.assign({ layer: win.activeLayer.id }, { [win.curveChannel]: p })))
+                            }
                         }
                         Text {
                             width: parent.width

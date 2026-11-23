@@ -73,6 +73,13 @@ pub mod qobject {
         #[qinvokable]
         #[cxx_name = "curveSamples"]
         fn curve_samples(self: &PhotoCanvas, points: &QString) -> QString;
+        // Live preview while a control is dragged: applies the command, replacing the previous preview; the layers list and the
+        // history are left alone. `endPreview` drops the preview (the final `run` follows, so the history gets one entry)
+        #[qinvokable]
+        fn preview(self: Pin<&mut PhotoCanvas>, id: &QString, params: &QString);
+        #[qinvokable]
+        #[cxx_name = "endPreview"]
+        fn end_preview(self: Pin<&mut PhotoCanvas>);
         #[qinvokable]
         fn undo(self: Pin<&mut PhotoCanvas>);
         #[qinvokable]
@@ -238,6 +245,7 @@ pub struct PhotoCanvasRust {
     generation: u64,
     // What the last request asked for: a repaint that changes nothing composites nothing
     last_request: Option<(u64, (i32, i32, i32, i32), u32, u32)>,
+    previewing: bool,
     revision: u64,
     title: QString,
     info: QString,
@@ -353,6 +361,39 @@ impl qobject::PhotoCanvas {
         let points: Vec<CurvePoint> = pairs.iter().map(|p| CurvePoint { input: (p[0] / 255.0) as f32, output: (p[1] / 255.0) as f32 }).collect();
         let samples = photocraft_compose::adjust::curve_samples::<129>(&points);
         QString::from(&serde_json::to_string(&samples).unwrap_or_else(|_| "[]".into()))
+    }
+
+    pub fn preview(mut self: Pin<&mut Self>, id: &QString, params: &QString) {
+        self.as_mut().drop_preview();
+        let Ok(params) = serde_json::from_str(&params.to_string()) else { return };
+        if self.as_mut().rust_mut().doc.execute(&id.to_string(), params).is_ok() {
+            self.as_mut().rust_mut().previewing = true;
+            self.sync_revision();
+        }
+    }
+
+    pub fn end_preview(mut self: Pin<&mut Self>) {
+        if self.as_mut().drop_preview() {
+            self.sync_revision();
+        }
+    }
+
+    /// Undoes the preview in progress, if any
+    fn drop_preview(mut self: Pin<&mut Self>) -> bool {
+        if !self.previewing {
+            return false;
+        }
+        let mut r = self.as_mut().rust_mut();
+        r.previewing = false;
+        r.doc.undo();
+        true
+    }
+
+    /// The picture changed without a refresh of the lists: new revision, new frame
+    fn sync_revision(mut self: Pin<&mut Self>) {
+        let revision = self.doc.detail()["revision"].as_u64().unwrap_or(self.revision + 1);
+        self.as_mut().rust_mut().revision = revision;
+        self.view_changed();
     }
 
     pub fn undo(mut self: Pin<&mut Self>) {
