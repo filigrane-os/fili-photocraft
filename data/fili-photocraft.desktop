@@ -1,0 +1,13 @@
+[Desktop Entry]
+Type=Application
+Name=PhotoCraft
+GenericName=Image editor
+GenericName[fr]=Éditeur d'images
+Comment=Edit photos and images with layers, adjustment layers and layer styles
+Comment[fr]=Retoucher des photos et des images avec des calques, des calques de réglage et des styles
+Exec=fili-photocraft %f
+Icon=fili-photocraft
+Keywords=photo;image;picture;editor;retouch;layers;psd;photoshop;edit;éditeur;retouche;calques;
+MimeType=image/jpeg;image/png;image/webp;image/tiff;image/bmp;image/gif;image/vnd.adobe.photoshop;
+Categories=Graphics;2DGraphics;RasterGraphics;
+Terminal=false
