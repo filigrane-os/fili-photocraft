@@ -944,7 +944,7 @@ ApplicationWindow {
         height: implicitHeight
         closable: false
         detachable: false
-        model: canvas.loaded ? [canvas.title] : []
+        model: canvas.loaded ? [canvas.title + " @ " + (canvas.zoom * 100).toFixed(1) + "% (RGB/8)"] : []
     }
     Rectangle {
         anchors { left: toolStrip.right; right: panelBar.left; top: documentTab.bottom; bottom: debug.top }
