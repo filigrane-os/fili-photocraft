@@ -26,9 +26,10 @@ ApplicationWindow {
     readonly property var activeLayer: layerList.find(l => l.selected) ?? null
 
     // The tool in hand (the tool strip), and the label of what the pointer rests on (FiliToolStrip asks the window to draw it)
-    property string tool: "hand"
+    property string tool: "move"
     property int propertiesTab: 0
     property int layersTab: 0
+    property int topTab: 0
     // The footer follows Settings > Appearance (fili-theme footer, --no-footer) live; it comes back for an error
     property bool showFooter: Fili.footer()
     property bool errorShown: false
@@ -147,7 +148,7 @@ ApplicationWindow {
     readonly property var channelList: { canvas.layers; try { const c = JSON.parse(canvas.ask("channel.list", "{}")); return c ? [{ name: c.composite, visible: c.compositeVisible, composite: true }].concat(c.colors, c.alpha) : []; } catch (e) { return []; } }
     readonly property var pathList: { canvas.layers; try { const p = JSON.parse(canvas.ask("path.list", "{}")); return p ? p.paths.map(x => typeof x === "string" ? { name: x } : x) : []; } catch (e) { return []; } }
     readonly property var historyState: { try { return JSON.parse(canvas.history); } catch (e) { return { names: [], applied: 0 }; } }
-    readonly property var swatchGroups: { try { return JSON.parse(canvas.ask("swatches.list", "{}")).groups; } catch (e) { return []; } }
+    readonly property var swatchGroups: { canvas.layers; try { return JSON.parse(canvas.ask("swatches.list", "{}")).groups; } catch (e) { return []; } }
     // The sliders of each adjustment (the parameters of layer.setAdjustment); `index` picks one value of a list
     readonly property var adjSchema: ({
         levels: [{ key: "inBlack", label: "Input black", min: 0, max: 253 }, { key: "gamma", label: "Gamma", min: 0.1, max: 9.99, decimals: 2 }, { key: "inWhite", label: "Input white", min: 2, max: 255 },
@@ -347,7 +348,7 @@ ApplicationWindow {
         onCloseRequested: win.runAction("close")
         Text {
             visible: !win.painting && !win.shapeTool && win.tool !== "text" && win.tool !== "pen" && win.tool !== "direct" && !win.dragTools[win.tool] && win.tool !== "lasso" && win.tool !== "wand"
-            text: win.tool === "zoom" ? Fili.tr("Click to zoom in, Alt+click to zoom out") : Fili.tr("Drag to move the image")
+            text: win.tool === "zoom" ? Fili.tr("Click to zoom in, Alt+click to zoom out") : win.tool === "move" ? Fili.tr("Drag to move the selected layer") : Fili.tr("Drag to move the image")
             font.family: FiliTheme.font
             font.pixelSize: FiliTheme.size
             color: FiliTheme.textSecondary
@@ -429,9 +430,10 @@ ApplicationWindow {
     // The strip of panel icons (PhotoCraft): a click shows the panel, a click on the one in view hides the dock
     property bool dockOpen: true
     function showPanel(group, index) {
-        if (dockOpen && ((group === 0 && propertiesTab === index) || (group === 1 && layersTab === index))) { dockOpen = false; return; }
+        const now = group === 0 ? propertiesTab : group === 1 ? layersTab : topTab;
+        if (dockOpen && now === index) { dockOpen = false; return; }
         dockOpen = true;
-        if (group === 0) propertiesTab = index; else layersTab = index;
+        if (group === 0) propertiesTab = index; else if (group === 1) layersTab = index; else topTab = index;
     }
     Rectangle {
         id: panelBar
@@ -444,13 +446,13 @@ ApplicationWindow {
             spacing: 2
             Repeater {
                 model: [
-                    { glyph: "sliders-horizontal", tip: "Properties", group: 0, index: 0 }, { glyph: "compass", tip: "Navigator", group: 0, index: 3 },
-                    { glyph: "palette", tip: "Color", group: 0, index: 2 }, { glyph: "layers", tip: "Layers", group: 1, index: 0 }, { glyph: "history", tip: "History", group: 1, index: 3 }
+                    { glyph: "sliders-horizontal", tip: "Properties", group: 0, index: 0 }, { glyph: "compass", tip: "Navigator", group: 2, index: 1 },
+                    { glyph: "palette", tip: "Color", group: 2, index: 0 }, { glyph: "layers", tip: "Layers", group: 1, index: 0 }, { glyph: "history", tip: "History", group: 1, index: 3 }
                 ]
                 Rectangle {
                     id: panelButton
                     required property var modelData
-                    readonly property bool on: win.dockOpen && (modelData.group === 0 ? win.propertiesTab === modelData.index : win.layersTab === modelData.index)
+                    readonly property bool on: win.dockOpen && (modelData.group === 0 ? win.propertiesTab : modelData.group === 1 ? win.layersTab : win.topTab) === modelData.index
                     width: 30; height: 30; radius: FiliTheme.radiusControl
                     color: on ? FiliTheme.surfaceActive : area.containsMouse ? FiliTheme.surfaceHover : "transparent"
                     Accessible.role: Accessible.Button
@@ -475,8 +477,94 @@ ApplicationWindow {
         anchors { right: parent.right; top: optionsBar.bottom; bottom: debug.top }
         FiliDockGroup {
             Layout.fillWidth: true
-            Layout.preferredHeight: win.curvesShown || win.propertiesTab >= 2 || win.adjustmentSliders.length > 3 ? 440 : win.adjustmentSliders.length > 0 ? 300 : 200
-            tabs: [Fili.tr("Properties"), Fili.tr("Adjustments"), Fili.tr("Color"), Fili.tr("Navigator")]
+            Layout.preferredHeight: 230
+            tabs: [Fili.tr("Color"), Fili.tr("Navigator")]
+            currentIndex: win.topTab
+            onTabClicked: i => win.topTab = i
+            Flickable {
+                id: colorView
+                clip: true
+                contentHeight: colorColumn.height + FiliTheme.space3
+                KineticScroll {}
+                Column {
+                    id: colorColumn
+                    x: FiliTheme.space3
+                    width: colorView.width - 2 * FiliTheme.space3
+                    y: FiliTheme.space3
+                    spacing: FiliTheme.space2
+                    Row {
+                        spacing: FiliTheme.space3
+                        Rectangle { width: 28; height: 28; radius: 3; color: win.brushColor; border { width: 1; color: FiliTheme.border } }
+                        Rectangle { width: 28; height: 28; radius: 3; color: win.bgColor; border { width: 1; color: FiliTheme.border } }
+                        Text { anchors.verticalCenter: parent.verticalCenter; text: win.brushColor; font.family: FiliTheme.font; font.pixelSize: FiliTheme.size; color: FiliTheme.textSecondary }
+                        FiliButton { anchors.verticalCenter: parent.verticalCenter; label: Fili.tr("Swap"); onClicked: { const c = win.brushColor; win.brushColor = win.bgColor; win.bgColor = c; } }
+                    }
+                    Repeater {
+                        model: win.swatchGroups
+                        Column {
+                            required property var modelData
+                            width: colorColumn.width
+                            spacing: FiliTheme.space1
+                            Text { text: modelData.name; font.family: FiliTheme.font; font.pixelSize: FiliTheme.sizeSmall; color: FiliTheme.muted }
+                            Flow {
+                                width: parent.width
+                                spacing: 3
+                                Repeater {
+                                    model: modelData.swatches
+                                    Rectangle {
+                                        required property var modelData
+                                        width: 18; height: 18; radius: 2; color: modelData.hex
+                                        border { width: win.brushColor === modelData.hex ? 2 : 1; color: win.brushColor === modelData.hex ? FiliTheme.accentColor : FiliTheme.border }
+                                        MouseArea { anchors.fill: parent; onClicked: e => { if (e.modifiers & Qt.AltModifier) win.bgColor = parent.modelData.hex; else win.brushColor = parent.modelData.hex; } }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+                FiliScrollBar { flick: colorView; anchors { top: parent.top; bottom: parent.bottom; right: parent.right } }
+            }
+            Item {
+                id: navigatorView
+                // The picture of the document and the part the canvas shows (a frame), a click or a drag moves the view
+                readonly property real ratio: nav.implicitWidth > 0 ? nav.implicitWidth / nav.implicitHeight : 1
+                Image {
+                    id: nav
+                    anchors.centerIn: parent
+                    width: Math.min(parent.width - 2 * FiliTheme.space3, (parent.height - 2 * FiliTheme.space3) * navigatorView.ratio)
+                    height: width / navigatorView.ratio
+                    source: canvas.navigator
+                    cache: false
+                    fillMode: Image.Stretch
+                    Rectangle {
+                        readonly property var rect: {
+                            canvas.viewKey;
+                            if (!canvas.loaded || canvasArea.width <= 0) return null;
+                            const a = JSON.parse(canvas.toDoc(0, 0)), b = JSON.parse(canvas.toDoc(canvasArea.width, canvasArea.height));
+                            const dw = win.docSize.w, dh = win.docSize.h;
+                            if (dw <= 0 || dh <= 0) return null;
+                            const x0 = Math.max(0, a[0]) / dw, y0 = Math.max(0, a[1]) / dh, x1 = Math.min(dw, b[0]) / dw, y1 = Math.min(dh, b[1]) / dh;
+                            return Qt.rect(x0 * nav.width, y0 * nav.height, Math.max(2, (x1 - x0) * nav.width), Math.max(2, (y1 - y0) * nav.height));
+                        }
+                        visible: rect !== null
+                        x: rect ? rect.x : 0; y: rect ? rect.y : 0; width: rect ? rect.width : 0; height: rect ? rect.height : 0
+                        color: "transparent"
+                        border { width: 2; color: FiliTheme.accentColor }
+                    }
+                    MouseArea {
+                        anchors.fill: parent
+                        function go(e) { canvas.centerOn(Math.max(0, Math.min(1, e.x / nav.width)) * win.docSize.w, Math.max(0, Math.min(1, e.y / nav.height)) * win.docSize.h); }
+                        onPressed: e => go(e)
+                        onPositionChanged: e => { if (pressed) go(e); }
+                    }
+                }
+                Text { anchors.centerIn: parent; visible: !canvas.loaded; text: Fili.tr("No image"); font.family: FiliTheme.font; font.pixelSize: FiliTheme.size; color: FiliTheme.textSecondary }
+            }
+        }
+        FiliDockGroup {
+            Layout.fillWidth: true
+            Layout.preferredHeight: win.curvesShown || win.adjustmentSliders.length > 3 ? 440 : win.adjustmentSliders.length > 0 ? 320 : 290
+            tabs: [Fili.tr("Properties"), Fili.tr("Adjustments")]
             currentIndex: win.propertiesTab
             onTabClicked: i => win.propertiesTab = i
             Item {
@@ -635,85 +723,6 @@ ApplicationWindow {
                 FiliSidebarRow { label: Fili.tr("Posterize"); enabled: canvas.loaded; onClicked: win.runAction("adjust-posterize") }
                 FiliSidebarRow { label: Fili.tr("Photo Filter"); enabled: canvas.loaded; onClicked: win.runAction("adjust-photo-filter") }
             }
-            Item {
-                id: navigatorView
-                // The picture of the document and the part the canvas shows (a frame), a click or a drag moves the view
-                readonly property real ratio: nav.implicitWidth > 0 ? nav.implicitWidth / nav.implicitHeight : 1
-                Image {
-                    id: nav
-                    anchors.centerIn: parent
-                    width: Math.min(parent.width - 2 * FiliTheme.space3, (parent.height - 2 * FiliTheme.space3) * navigatorView.ratio)
-                    height: width / navigatorView.ratio
-                    source: canvas.navigator
-                    cache: false
-                    fillMode: Image.Stretch
-                    Rectangle {
-                        readonly property var rect: {
-                            canvas.viewKey;
-                            if (!canvas.loaded || canvasArea.width <= 0) return null;
-                            const a = JSON.parse(canvas.toDoc(0, 0)), b = JSON.parse(canvas.toDoc(canvasArea.width, canvasArea.height));
-                            const dw = win.docSize.w, dh = win.docSize.h;
-                            if (dw <= 0 || dh <= 0) return null;
-                            const x0 = Math.max(0, a[0]) / dw, y0 = Math.max(0, a[1]) / dh, x1 = Math.min(dw, b[0]) / dw, y1 = Math.min(dh, b[1]) / dh;
-                            return Qt.rect(x0 * nav.width, y0 * nav.height, Math.max(2, (x1 - x0) * nav.width), Math.max(2, (y1 - y0) * nav.height));
-                        }
-                        visible: rect !== null
-                        x: rect ? rect.x : 0; y: rect ? rect.y : 0; width: rect ? rect.width : 0; height: rect ? rect.height : 0
-                        color: "transparent"
-                        border { width: 2; color: FiliTheme.accentColor }
-                    }
-                    MouseArea {
-                        anchors.fill: parent
-                        function go(e) { canvas.centerOn(Math.max(0, Math.min(1, e.x / nav.width)) * win.docSize.w, Math.max(0, Math.min(1, e.y / nav.height)) * win.docSize.h); }
-                        onPressed: e => go(e)
-                        onPositionChanged: e => { if (pressed) go(e); }
-                    }
-                }
-                Text { anchors.centerIn: parent; visible: !canvas.loaded; text: Fili.tr("No image"); font.family: FiliTheme.font; font.pixelSize: FiliTheme.size; color: FiliTheme.textSecondary }
-            }
-            Flickable {
-                id: colorView
-                clip: true
-                contentHeight: colorColumn.height + FiliTheme.space3
-                KineticScroll {}
-                Column {
-                    id: colorColumn
-                    x: FiliTheme.space3
-                    width: colorView.width - 2 * FiliTheme.space3
-                    y: FiliTheme.space3
-                    spacing: FiliTheme.space2
-                    Row {
-                        spacing: FiliTheme.space3
-                        Rectangle { width: 28; height: 28; radius: 3; color: win.brushColor; border { width: 1; color: FiliTheme.border } }
-                        Rectangle { width: 28; height: 28; radius: 3; color: win.bgColor; border { width: 1; color: FiliTheme.border } }
-                        Text { anchors.verticalCenter: parent.verticalCenter; text: win.brushColor; font.family: FiliTheme.font; font.pixelSize: FiliTheme.size; color: FiliTheme.textSecondary }
-                        FiliButton { anchors.verticalCenter: parent.verticalCenter; label: Fili.tr("Swap"); onClicked: { const c = win.brushColor; win.brushColor = win.bgColor; win.bgColor = c; } }
-                    }
-                    Repeater {
-                        model: win.swatchGroups
-                        Column {
-                            required property var modelData
-                            width: colorColumn.width
-                            spacing: FiliTheme.space1
-                            Text { text: modelData.name; font.family: FiliTheme.font; font.pixelSize: FiliTheme.sizeSmall; color: FiliTheme.muted }
-                            Flow {
-                                width: parent.width
-                                spacing: 3
-                                Repeater {
-                                    model: modelData.swatches
-                                    Rectangle {
-                                        required property var modelData
-                                        width: 18; height: 18; radius: 2; color: modelData.hex
-                                        border { width: win.brushColor === modelData.hex ? 2 : 1; color: win.brushColor === modelData.hex ? FiliTheme.accentColor : FiliTheme.border }
-                                        MouseArea { anchors.fill: parent; onClicked: e => { if (e.modifiers & Qt.AltModifier) win.bgColor = parent.modelData.hex; else win.brushColor = parent.modelData.hex; } }
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-                FiliScrollBar { flick: colorView; anchors { top: parent.top; bottom: parent.bottom; right: parent.right } }
-            }
         }
         FiliDockGroup {
             Layout.fillWidth: true
@@ -721,25 +730,56 @@ ApplicationWindow {
             tabs: [Fili.tr("Layers"), Fili.tr("Channels"), Fili.tr("Paths"), Fili.tr("History")]
             currentIndex: win.layersTab
             onTabClicked: i => win.layersTab = i
-            ListView {
-                id: layersView
-                clip: true
-                model: win.layerList
-                KineticScroll {}
-                delegate: FiliLayerRow {
-                    required property var modelData
-                    width: layersView.width
-                    label: modelData.name
-                    subtitle: modelData.blend !== "Normal" && modelData.blend !== undefined ? modelData.kind + " · " + modelData.blend : modelData.kind
-                    thumbnail: modelData.thumbnail ?? ""
-                    depth: modelData.depth
-                    detail: modelData.opacity < 1 ? Math.round(modelData.opacity * 100) + " %" : ""
-                    selected: modelData.selected
-                    layerVisible: modelData.visible
-                    onClicked: canvas.run("layer.select", JSON.stringify({ layer: modelData.id }))
-                    onVisibilityToggled: shown => win.setLayer(modelData.id, { visible: shown })
+            Item {
+                ListView {
+                    id: layersView
+                    anchors { fill: parent; bottomMargin: layerButtons.height }
+                    clip: true
+                    model: win.layerList
+                    KineticScroll {}
+                    delegate: FiliLayerRow {
+                        required property var modelData
+                        width: layersView.width
+                        label: modelData.name
+                        subtitle: modelData.blend !== "Normal" && modelData.blend !== undefined ? modelData.kind + " · " + modelData.blend : modelData.kind
+                        thumbnail: modelData.thumbnail ?? ""
+                        depth: modelData.depth
+                        detail: modelData.opacity < 1 ? Math.round(modelData.opacity * 100) + " %" : ""
+                        selected: modelData.selected
+                        layerVisible: modelData.visible
+                        onClicked: canvas.run("layer.select", JSON.stringify({ layer: modelData.id }))
+                        onVisibilityToggled: shown => win.setLayer(modelData.id, { visible: shown })
+                    }
+                    FiliScrollBar { flick: layersView; anchors { top: parent.top; bottom: parent.bottom; right: parent.right } }
                 }
-                FiliScrollBar { flick: layersView; anchors { top: parent.top; bottom: parent.bottom; right: parent.right } }
+                Row {
+                    id: layerButtons
+                    anchors { right: parent.right; bottom: parent.bottom; margins: FiliTheme.space2 }
+                    spacing: 2
+                    Repeater {
+                        model: [{ icon: "plus", tip: "New Layer", cmd: "layer.new.layer" }, { icon: "copy", tip: "Duplicate Layer", cmd: "layer.duplicate" },
+                            { icon: "folder-plus", tip: "Group Layers", cmd: "layer.groupLayers" }, { icon: "trash", tip: "Delete Layer", cmd: "layer.delete" }]
+                        Rectangle {
+                            id: layerButton
+                            required property var modelData
+                            width: 28; height: 28; radius: FiliTheme.radiusControl
+                            color: lbArea.containsMouse ? FiliTheme.surfaceHover : "transparent"
+                            opacity: canvas.loaded ? 1 : 0.4
+                            Accessible.role: Accessible.Button
+                            Accessible.name: Fili.tr(modelData.tip)
+                            FiliIcon { anchors.centerIn: parent; size: 15; name: layerButton.modelData.icon; color: FiliTheme.textSecondary }
+                            MouseArea {
+                                id: lbArea
+                                anchors.fill: parent
+                                hoverEnabled: true
+                                enabled: canvas.loaded
+                                onClicked: canvas.run(layerButton.modelData.cmd, "{}")
+                                onEntered: win.showTip(layerButton, Fili.tr(layerButton.modelData.tip))
+                                onExited: win.hideTip(layerButton)
+                            }
+                        }
+                    }
+                }
             }
             ListView {
                 id: channelsView
