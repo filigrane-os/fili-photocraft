@@ -132,6 +132,9 @@ ApplicationWindow {
     property var lasso: []
     property int wandTolerance: 32
     property string bgColor: "#ffffff"
+    // Move: pick the layer (or its group) under the pointer before moving, like PhotoCraft's Auto-Select
+    property bool autoSelect: true
+    property string autoTarget: "layer"
     // Move: where the drag began (document), so the preview moves the layer by the whole distance each time
     property var moveFrom: null
     readonly property var shapeKinds: ({ rect: "rect", rounded: "roundedRect", shapeellipse: "ellipse", triangle: "triangle", star: "star", polygon: "polygon" })
@@ -498,11 +501,24 @@ ApplicationWindow {
         closeButton: true
         onCloseRequested: win.runAction("close")
         Text {
-            visible: !win.painting && !win.shapeTool && win.tool !== "text" && win.tool !== "pen" && win.tool !== "direct" && !win.dragTools[win.tool] && win.tool !== "lasso" && win.tool !== "wand"
-            text: win.tool === "zoom" ? Fili.tr("Click to zoom in, Alt+click to zoom out") : win.tool === "move" ? Fili.tr("Drag to move the selected layer") : Fili.tr("Drag to move the image")
+            visible: !win.painting && !win.shapeTool && win.tool !== "text" && win.tool !== "pen" && win.tool !== "direct" && win.tool !== "move" && !win.dragTools[win.tool] && win.tool !== "lasso" && win.tool !== "wand"
+            text: win.tool === "zoom" ? Fili.tr("Click to zoom in, Alt+click to zoom out") : Fili.tr("Drag to move the image")
             font.family: FiliTheme.font
             font.pixelSize: FiliTheme.size
             color: FiliTheme.textSecondary
+        }
+        Row {
+            visible: win.tool === "move"
+            spacing: FiliTheme.space3
+            FiliCheckBox { anchors.verticalCenter: parent.verticalCenter; label: Fili.tr("Auto-Select"); checked: win.autoSelect; onToggled: win.autoSelect = !win.autoSelect }
+            FiliSelect {
+                anchors.verticalCenter: parent.verticalCenter
+                width: 110
+                visible: win.autoSelect
+                model: [{ label: Fili.tr("Layer"), value: "layer" }, { label: Fili.tr("Group"), value: "group" }]
+                current: win.autoTarget
+                onPicked: v => win.autoTarget = v
+            }
         }
         Row {
             visible: win.tool === "text"
@@ -1198,7 +1214,11 @@ ApplicationWindow {
                     else win.penPoints = win.penPoints.concat([JSON.parse(canvas.toDoc(e.x, e.y))]);
                 }
                 if (win.tool === "text" && e.button === Qt.LeftButton) { win.textAt = { x: e.x, y: e.y, doc: JSON.parse(canvas.toDoc(e.x, e.y)) }; textInput.text = ""; textInput.forceActiveFocus(); }
-                if (win.tool === "move" && e.button === Qt.LeftButton && win.activeLayer) win.moveFrom = JSON.parse(canvas.toDoc(e.x, e.y));
+                if (win.tool === "move" && e.button === Qt.LeftButton) {
+                    const p = JSON.parse(canvas.toDoc(e.x, e.y));
+                    if (win.autoSelect) canvas.run("layer.pickAt", JSON.stringify({ x: Math.round(p[0]), y: Math.round(p[1]), target: win.autoTarget, select: true }));
+                    if (win.activeLayer) win.moveFrom = p;
+                }
                 if (win.tool === "eyedropper" && e.button === Qt.LeftButton) {
                     const p = JSON.parse(canvas.toDoc(e.x, e.y)), c = canvas.pixelAt(p[0], p[1]);
                     if (c !== "") { if (e.modifiers & Qt.AltModifier) win.bgColor = c; else win.brushColor = c; }
