@@ -225,6 +225,108 @@
           "sep": true
         },
         {
+          "label": "Layer Style",
+          "children": [
+            {
+              "label": "Drop Shadow",
+              "exec": "fili-photocraft ctl --pid %pid action layer-style-drop-shadow"
+            },
+            {
+              "label": "Inner Shadow",
+              "exec": "fili-photocraft ctl --pid %pid action layer-style-inner-shadow"
+            },
+            {
+              "label": "Outer Glow",
+              "exec": "fili-photocraft ctl --pid %pid action layer-style-outer-glow"
+            },
+            {
+              "label": "Inner Glow",
+              "exec": "fili-photocraft ctl --pid %pid action layer-style-inner-glow"
+            },
+            {
+              "label": "Bevel & Emboss",
+              "exec": "fili-photocraft ctl --pid %pid action layer-style-bevel-emboss"
+            },
+            {
+              "sep": true
+            },
+            {
+              "label": "Color Overlay",
+              "exec": "fili-photocraft ctl --pid %pid action layer-style-color-overlay"
+            },
+            {
+              "label": "Gradient Overlay",
+              "exec": "fili-photocraft ctl --pid %pid action layer-style-gradient-overlay"
+            },
+            {
+              "label": "Stroke…",
+              "exec": "fili-photocraft ctl --pid %pid action layer-style-stroke"
+            },
+            {
+              "sep": true
+            },
+            {
+              "label": "Copy Layer Style",
+              "exec": "fili-photocraft ctl --pid %pid action layer-style-copy"
+            },
+            {
+              "label": "Paste Layer Style",
+              "exec": "fili-photocraft ctl --pid %pid action layer-style-paste"
+            },
+            {
+              "label": "Clear Layer Style",
+              "exec": "fili-photocraft ctl --pid %pid action layer-style-clear"
+            }
+          ]
+        },
+        {
+          "label": "Layer Mask",
+          "children": [
+            {
+              "label": "Reveal All",
+              "exec": "fili-photocraft ctl --pid %pid action layer-mask-reveal-all"
+            },
+            {
+              "label": "Hide All",
+              "exec": "fili-photocraft ctl --pid %pid action layer-mask-hide-all"
+            },
+            {
+              "label": "Reveal Selection",
+              "exec": "fili-photocraft ctl --pid %pid action layer-mask-reveal-selection"
+            },
+            {
+              "label": "Hide Selection",
+              "exec": "fili-photocraft ctl --pid %pid action layer-mask-hide-selection"
+            },
+            {
+              "sep": true
+            },
+            {
+              "label": "Apply Layer Mask",
+              "exec": "fili-photocraft ctl --pid %pid action layer-mask-apply"
+            },
+            {
+              "label": "Delete Layer Mask",
+              "exec": "fili-photocraft ctl --pid %pid action layer-mask-delete"
+            }
+          ]
+        },
+        {
+          "label": "Create Clipping Mask",
+          "exec": "fili-photocraft ctl --pid %pid action layer-clipping-create"
+        },
+        {
+          "label": "Release Clipping Mask",
+          "exec": "fili-photocraft ctl --pid %pid action layer-clipping-release"
+        },
+        {
+          "label": "Link Layers",
+          "exec": "fili-photocraft ctl --pid %pid action layer-link"
+        },
+        {
+          "sep": true
+        },
+        {
           "label": "Arrange",
           "children": [
             {
@@ -251,9 +353,6 @@
         {
           "label": "Show or Hide Layer",
           "exec": "fili-photocraft ctl --pid %pid action toggle-layer"
-        },
-        {
-          "sep": true
         },
         {
           "label": "New Curves Adjustment",

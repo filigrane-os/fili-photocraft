@@ -203,6 +203,82 @@
       "label": "Rasterize Layer"
     },
     {
+      "name": "layer-mask-reveal-all",
+      "label": "Reveal All"
+    },
+    {
+      "name": "layer-mask-hide-all",
+      "label": "Hide All"
+    },
+    {
+      "name": "layer-mask-reveal-selection",
+      "label": "Reveal Selection"
+    },
+    {
+      "name": "layer-mask-hide-selection",
+      "label": "Hide Selection"
+    },
+    {
+      "name": "layer-mask-delete",
+      "label": "Delete Layer Mask"
+    },
+    {
+      "name": "layer-mask-apply",
+      "label": "Apply Layer Mask"
+    },
+    {
+      "name": "layer-style-drop-shadow",
+      "label": "Drop Shadow"
+    },
+    {
+      "name": "layer-style-inner-shadow",
+      "label": "Inner Shadow"
+    },
+    {
+      "name": "layer-style-outer-glow",
+      "label": "Outer Glow"
+    },
+    {
+      "name": "layer-style-inner-glow",
+      "label": "Inner Glow"
+    },
+    {
+      "name": "layer-style-bevel-emboss",
+      "label": "Bevel & Emboss"
+    },
+    {
+      "name": "layer-style-color-overlay",
+      "label": "Color Overlay"
+    },
+    {
+      "name": "layer-style-gradient-overlay",
+      "label": "Gradient Overlay"
+    },
+    {
+      "name": "layer-style-clear",
+      "label": "Clear Layer Style"
+    },
+    {
+      "name": "layer-style-copy",
+      "label": "Copy Layer Style"
+    },
+    {
+      "name": "layer-style-paste",
+      "label": "Paste Layer Style"
+    },
+    {
+      "name": "layer-clipping-create",
+      "label": "Create Clipping Mask"
+    },
+    {
+      "name": "layer-clipping-release",
+      "label": "Release Clipping Mask"
+    },
+    {
+      "name": "layer-link",
+      "label": "Link Layers"
+    },
+    {
       "name": "filter-blur",
       "label": "Blur"
     },
@@ -256,6 +332,10 @@
       "name": "image-canvas-size",
       "label": "Canvas Size",
       "keys": "Ctrl+Alt+C"
+    },
+    {
+      "name": "layer-style-stroke",
+      "label": "Stroke"
     },
     {
       "name": "filter-gaussian-blur",

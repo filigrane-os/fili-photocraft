@@ -192,8 +192,9 @@ ApplicationWindow {
     // The blend modes of the layer menu, in Photoshop order (the engine reads the labels)
     readonly property var blendModes: ["Normal", "Dissolve", "Darken", "Multiply", "Color Burn", "Linear Burn", "Darker Color", "Lighten", "Screen", "Color Dodge", "Linear Dodge (Add)", "Lighter Color", "Overlay", "Soft Light", "Hard Light", "Vivid Light", "Linear Light", "Pin Light", "Hard Mix", "Difference", "Exclusion", "Subtract", "Divide", "Hue", "Saturation", "Color", "Luminosity"].map(n => ({ label: Fili.tr(n), value: n }))
     // BEGIN generated dialogs
-    readonly property var dialogSpecs: {"file-new": {"cmd": "file.new", "title": "New Document", "fields": [{"key": "width", "label": "Width (px)", "value": 1920}, {"key": "height", "label": "Height (px)", "value": 1080}], "extra": {}}, "edit-stroke": {"cmd": "edit.stroke", "title": "Stroke the selection", "fields": [{"key": "width", "label": "Width (px)", "value": 3}], "extra": {"color": "$fg"}}, "image-size": {"cmd": "image.imageSize", "title": "Image Size", "fields": [{"key": "width", "label": "Width (px)", "value": "@w"}, {"key": "height", "label": "Height (px)", "value": "@h"}], "extra": {}}, "image-canvas-size": {"cmd": "image.canvasSize", "title": "Canvas Size", "fields": [{"key": "width", "label": "Width (px)", "value": "@w"}, {"key": "height", "label": "Height (px)", "value": "@h"}], "extra": {}}, "filter-gaussian-blur": {"cmd": "filter.blur.gaussianBlur", "title": "Gaussian Blur", "fields": [{"key": "radius", "label": "Radius (px)", "value": 5}], "extra": {}}, "filter-box-blur": {"cmd": "filter.blur.boxBlur", "title": "Box Blur", "fields": [{"key": "radius", "label": "Radius (px)", "value": 5}], "extra": {}}, "filter-motion-blur": {"cmd": "filter.blur.motionBlur", "title": "Motion Blur", "fields": [{"key": "angle", "label": "Angle (°)", "value": 0}, {"key": "distance", "label": "Distance (px)", "value": 20}], "extra": {}}, "filter-surface-blur": {"cmd": "filter.blur.surfaceBlur", "title": "Surface Blur", "fields": [{"key": "radius", "label": "Radius (px)", "value": 5}, {"key": "threshold", "label": "Threshold", "value": 15}], "extra": {}}, "filter-unsharp-mask": {"cmd": "filter.sharpen.unsharpMask", "title": "Unsharp Mask", "fields": [{"key": "amount", "label": "Amount (%)", "value": 80}, {"key": "radius", "label": "Radius (px)", "value": 1}, {"key": "threshold", "label": "Threshold", "value": 0}], "extra": {}}, "filter-smart-sharpen": {"cmd": "filter.sharpen.smartSharpen", "title": "Smart Sharpen", "fields": [{"key": "amount", "label": "Amount (%)", "value": 100}, {"key": "radius", "label": "Radius (px)", "value": 1}, {"key": "reduceNoise", "label": "Reduce noise (%)", "value": 10}], "extra": {}}, "filter-add-noise": {"cmd": "filter.noise.addNoise", "title": "Add Noise", "fields": [{"key": "amount", "label": "Amount (%)", "value": 12.5}], "extra": {}}, "filter-median": {"cmd": "filter.noise.median", "title": "Median", "fields": [{"key": "radius", "label": "Radius (px)", "value": 2}], "extra": {}}, "filter-emboss": {"cmd": "filter.stylize.emboss", "title": "Emboss", "fields": [{"key": "angle", "label": "Angle (°)", "value": 135}, {"key": "height", "label": "Height (px)", "value": 3}, {"key": "amount", "label": "Amount (%)", "value": 100}], "extra": {}}, "filter-high-pass": {"cmd": "filter.other.highPass", "title": "High Pass", "fields": [{"key": "radius", "label": "Radius (px)", "value": 10}], "extra": {}}, "filter-offset": {"cmd": "filter.other.offset", "title": "Offset", "fields": [{"key": "horizontal", "label": "Horizontal (px)", "value": 0}, {"key": "vertical", "label": "Vertical (px)", "value": 0}], "extra": {"undefinedAreas": "wrap"}}}
+    readonly property var dialogSpecs: {"file-new": {"cmd": "file.new", "title": "New Document", "fields": [{"key": "width", "label": "Width (px)", "value": 1920}, {"key": "height", "label": "Height (px)", "value": 1080}], "extra": {}}, "edit-stroke": {"cmd": "edit.stroke", "title": "Stroke the selection", "fields": [{"key": "width", "label": "Width (px)", "value": 3}], "extra": {"color": "$fg"}}, "image-size": {"cmd": "image.imageSize", "title": "Image Size", "fields": [{"key": "width", "label": "Width (px)", "value": "@w"}, {"key": "height", "label": "Height (px)", "value": "@h"}], "extra": {}}, "image-canvas-size": {"cmd": "image.canvasSize", "title": "Canvas Size", "fields": [{"key": "width", "label": "Width (px)", "value": "@w"}, {"key": "height", "label": "Height (px)", "value": "@h"}], "extra": {}}, "layer-style-stroke": {"cmd": "layer.layerStyle.stroke", "title": "Layer Style: Stroke", "fields": [{"key": "size", "label": "Size (px)", "value": 3}], "extra": {"color": "$fg"}}, "filter-gaussian-blur": {"cmd": "filter.blur.gaussianBlur", "title": "Gaussian Blur", "fields": [{"key": "radius", "label": "Radius (px)", "value": 5}], "extra": {}}, "filter-box-blur": {"cmd": "filter.blur.boxBlur", "title": "Box Blur", "fields": [{"key": "radius", "label": "Radius (px)", "value": 5}], "extra": {}}, "filter-motion-blur": {"cmd": "filter.blur.motionBlur", "title": "Motion Blur", "fields": [{"key": "angle", "label": "Angle (°)", "value": 0}, {"key": "distance", "label": "Distance (px)", "value": 20}], "extra": {}}, "filter-surface-blur": {"cmd": "filter.blur.surfaceBlur", "title": "Surface Blur", "fields": [{"key": "radius", "label": "Radius (px)", "value": 5}, {"key": "threshold", "label": "Threshold", "value": 15}], "extra": {}}, "filter-unsharp-mask": {"cmd": "filter.sharpen.unsharpMask", "title": "Unsharp Mask", "fields": [{"key": "amount", "label": "Amount (%)", "value": 80}, {"key": "radius", "label": "Radius (px)", "value": 1}, {"key": "threshold", "label": "Threshold", "value": 0}], "extra": {}}, "filter-smart-sharpen": {"cmd": "filter.sharpen.smartSharpen", "title": "Smart Sharpen", "fields": [{"key": "amount", "label": "Amount (%)", "value": 100}, {"key": "radius", "label": "Radius (px)", "value": 1}, {"key": "reduceNoise", "label": "Reduce noise (%)", "value": 10}], "extra": {}}, "filter-add-noise": {"cmd": "filter.noise.addNoise", "title": "Add Noise", "fields": [{"key": "amount", "label": "Amount (%)", "value": 12.5}], "extra": {}}, "filter-median": {"cmd": "filter.noise.median", "title": "Median", "fields": [{"key": "radius", "label": "Radius (px)", "value": 2}], "extra": {}}, "filter-emboss": {"cmd": "filter.stylize.emboss", "title": "Emboss", "fields": [{"key": "angle", "label": "Angle (°)", "value": 135}, {"key": "height", "label": "Height (px)", "value": 3}, {"key": "amount", "label": "Amount (%)", "value": 100}], "extra": {}}, "filter-high-pass": {"cmd": "filter.other.highPass", "title": "High Pass", "fields": [{"key": "radius", "label": "Radius (px)", "value": 10}], "extra": {}}, "filter-offset": {"cmd": "filter.other.offset", "title": "Offset", "fields": [{"key": "horizontal", "label": "Horizontal (px)", "value": 0}, {"key": "vertical", "label": "Vertical (px)", "value": 0}], "extra": {"undefinedAreas": "wrap"}}}
     // END generated dialogs
+    // BEGIN generated helpers
     function runCommand(cmd, params) { canvas.run(cmd, JSON.stringify(params)); }
     // A command with a few numbers to ask for: the dialog is filled from the spec, "@w" and "@h" are the size of the image
     property var paramSpec: null
@@ -210,9 +211,11 @@ ApplicationWindow {
         if (p.color === "$fg") p.color = brushColor;
         runCommand(paramSpec.cmd, p);
     }
+    // END generated helpers
     function setLayer(id, props) { canvas.run("layer.setProps", JSON.stringify(Object.assign({ layer: id }, props))); }
     function zoomStep(factor) { canvas.zoomAt(factor, canvas.width / 2, canvas.height / 2); }
 
+    // BEGIN generated dialogs items
     FileDialog {
         id: saveDialog
         title: Fili.tr("Save a Copy")
@@ -246,6 +249,7 @@ ApplicationWindow {
             }
         }
     }
+    // END generated dialogs items
     FileDialog {
         id: openDialog
         title: Fili.tr("Open Image")
@@ -338,6 +342,25 @@ ApplicationWindow {
         "layer-bring-to-front": { on: () => canvas.loaded, run: () => win.runCommand("layer.arrange.bringToFront", {}) },
         "layer-send-to-back": { on: () => canvas.loaded, run: () => win.runCommand("layer.arrange.sendToBack", {}) },
         "layer-rasterize": { on: () => canvas.loaded, run: () => win.runCommand("layer.rasterize.layer", {}) },
+        "layer-mask-reveal-all": { on: () => canvas.loaded, run: () => win.runCommand("layer.layerMask.revealAll", {}) },
+        "layer-mask-hide-all": { on: () => canvas.loaded, run: () => win.runCommand("layer.layerMask.hideAll", {}) },
+        "layer-mask-reveal-selection": { on: () => canvas.loaded, run: () => win.runCommand("layer.layerMask.revealSelection", {}) },
+        "layer-mask-hide-selection": { on: () => canvas.loaded, run: () => win.runCommand("layer.layerMask.hideSelection", {}) },
+        "layer-mask-delete": { on: () => canvas.loaded, run: () => win.runCommand("layer.layerMask.delete", {}) },
+        "layer-mask-apply": { on: () => canvas.loaded, run: () => win.runCommand("layer.layerMask.apply", {}) },
+        "layer-style-drop-shadow": { on: () => canvas.loaded, run: () => win.runCommand("layer.layerStyle.dropShadow", {}) },
+        "layer-style-inner-shadow": { on: () => canvas.loaded, run: () => win.runCommand("layer.layerStyle.innerShadow", {}) },
+        "layer-style-outer-glow": { on: () => canvas.loaded, run: () => win.runCommand("layer.layerStyle.outerGlow", {}) },
+        "layer-style-inner-glow": { on: () => canvas.loaded, run: () => win.runCommand("layer.layerStyle.innerGlow", {}) },
+        "layer-style-bevel-emboss": { on: () => canvas.loaded, run: () => win.runCommand("layer.layerStyle.bevelEmboss", {}) },
+        "layer-style-color-overlay": { on: () => canvas.loaded, run: () => win.runCommand("layer.layerStyle.colorOverlay", { color: win.brushColor }) },
+        "layer-style-gradient-overlay": { on: () => canvas.loaded, run: () => win.runCommand("layer.layerStyle.gradientOverlay", { from: win.brushColor, to: win.bgColor }) },
+        "layer-style-clear": { on: () => canvas.loaded, run: () => win.runCommand("layer.layerStyle.clear", {}) },
+        "layer-style-copy": { on: () => canvas.loaded, run: () => win.runCommand("layer.layerStyle.copyLayerStyle", {}) },
+        "layer-style-paste": { on: () => canvas.loaded, run: () => win.runCommand("layer.layerStyle.pasteLayerStyle", {}) },
+        "layer-clipping-create": { on: () => canvas.loaded, run: () => win.runCommand("layer.createClippingMask", {}) },
+        "layer-clipping-release": { on: () => canvas.loaded, run: () => win.runCommand("layer.releaseClippingMask", {}) },
+        "layer-link": { on: () => canvas.loaded, run: () => win.runCommand("layer.linkLayers", {}) },
         "filter-blur": { on: () => canvas.loaded, run: () => win.runCommand("filter.blur.blur", {}) },
         "filter-blur-more": { on: () => canvas.loaded, run: () => win.runCommand("filter.blur.blurMore", {}) },
         "filter-sharpen": { on: () => canvas.loaded, run: () => win.runCommand("filter.sharpen.sharpen", {}) },
@@ -351,6 +374,7 @@ ApplicationWindow {
         "edit-stroke": { on: () => canvas.loaded, run: () => win.openParams("edit-stroke") },
         "image-size": { on: () => canvas.loaded, run: () => win.openParams("image-size") },
         "image-canvas-size": { on: () => canvas.loaded, run: () => win.openParams("image-canvas-size") },
+        "layer-style-stroke": { on: () => canvas.loaded, run: () => win.openParams("layer-style-stroke") },
         "filter-gaussian-blur": { on: () => canvas.loaded, run: () => win.openParams("filter-gaussian-blur") },
         "filter-box-blur": { on: () => canvas.loaded, run: () => win.openParams("filter-box-blur") },
         "filter-motion-blur": { on: () => canvas.loaded, run: () => win.openParams("filter-motion-blur") },
@@ -980,8 +1004,10 @@ ApplicationWindow {
                     anchors { right: parent.right; bottom: parent.bottom; margins: FiliTheme.space2 }
                     spacing: 2
                     Repeater {
-                        model: [{ icon: "plus", tip: "New Layer", cmd: "layer.new.layer" }, { icon: "copy", tip: "Duplicate Layer", cmd: "layer.duplicate" },
-                            { icon: "folder-plus", tip: "Group Layers", cmd: "layer.groupLayers" }, { icon: "trash", tip: "Delete Layer", cmd: "layer.delete" }]
+                        model: [{ icon: "link", tip: "Link Layers", cmd: "layer.linkLayers" }, { icon: "sparkles", tip: "Add a Layer Style", cmd: "layer.layerStyle.dropShadow" },
+                            { icon: "scan", tip: "Add a Layer Mask", cmd: "layer.layerMask.revealAll" }, { icon: "contrast", tip: "New Adjustment Layer", cmd: "" },
+                            { icon: "folder-plus", tip: "Group Layers", cmd: "layer.groupLayers" }, { icon: "copy", tip: "Duplicate Layer", cmd: "layer.duplicate" },
+                            { icon: "plus", tip: "New Layer", cmd: "layer.new.layer" }, { icon: "trash", tip: "Delete Layer", cmd: "layer.delete" }]
                         Rectangle {
                             id: layerButton
                             required property var modelData
@@ -996,7 +1022,7 @@ ApplicationWindow {
                                 anchors.fill: parent
                                 hoverEnabled: true
                                 enabled: canvas.loaded
-                                onClicked: canvas.run(layerButton.modelData.cmd, "{}")
+                                onClicked: { if (layerButton.modelData.cmd === "") { win.propertiesTab = 1; win.dockOpen = true; } else canvas.run(layerButton.modelData.cmd, "{}"); }
                                 onEntered: win.showTip(layerButton, Fili.tr(layerButton.modelData.tip))
                                 onExited: win.hideTip(layerButton)
                             }
