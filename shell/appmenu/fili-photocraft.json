@@ -680,6 +680,55 @@
       ]
     },
     {
+      "label": "Window",
+      "children": [
+        {
+          "label": "Color",
+          "exec": "fili-photocraft ctl --pid %pid action panel-color"
+        },
+        {
+          "label": "Swatches",
+          "exec": "fili-photocraft ctl --pid %pid action panel-swatches"
+        },
+        {
+          "label": "Gradients",
+          "exec": "fili-photocraft ctl --pid %pid action panel-gradients"
+        },
+        {
+          "label": "Patterns",
+          "exec": "fili-photocraft ctl --pid %pid action panel-patterns"
+        },
+        {
+          "label": "Properties",
+          "exec": "fili-photocraft ctl --pid %pid action panel-properties"
+        },
+        {
+          "label": "Adjustments",
+          "exec": "fili-photocraft ctl --pid %pid action panel-adjustments"
+        },
+        {
+          "label": "Navigator",
+          "exec": "fili-photocraft ctl --pid %pid action panel-navigator"
+        },
+        {
+          "label": "Layers",
+          "exec": "fili-photocraft ctl --pid %pid action panel-layers"
+        },
+        {
+          "label": "Channels",
+          "exec": "fili-photocraft ctl --pid %pid action panel-channels"
+        },
+        {
+          "label": "Paths",
+          "exec": "fili-photocraft ctl --pid %pid action panel-paths"
+        },
+        {
+          "label": "History",
+          "exec": "fili-photocraft ctl --pid %pid action panel-history"
+        }
+      ]
+    },
+    {
       "label": "Tools",
       "children": [
         {

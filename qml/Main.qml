@@ -320,6 +320,20 @@ ApplicationWindow {
         "tool-pen": { on: () => true, run: () => win.selectTool("pen") },
         "debug": { on: () => true, run: () => debug.open = !debug.open },
         "tool-direct": { on: () => true, run: () => win.selectTool("direct") },
+        "tool-quick": { on: () => true, run: () => win.selectTool("quick") },
+        "tool-object": { on: () => true, run: () => win.selectTool("object") },
+        "tool-remove": { on: () => true, run: () => win.selectTool("remove") },
+        "panel-color": { on: () => true, run: () => win.openPanel(2, 0) },
+        "panel-swatches": { on: () => true, run: () => win.openPanel(2, 1) },
+        "panel-gradients": { on: () => true, run: () => win.openPanel(2, 2) },
+        "panel-patterns": { on: () => true, run: () => win.openPanel(2, 3) },
+        "panel-properties": { on: () => true, run: () => win.openPanel(0, 0) },
+        "panel-adjustments": { on: () => true, run: () => win.openPanel(0, 1) },
+        "panel-navigator": { on: () => true, run: () => win.openPanel(0, 2) },
+        "panel-layers": { on: () => true, run: () => win.openPanel(1, 0) },
+        "panel-channels": { on: () => true, run: () => win.openPanel(1, 1) },
+        "panel-paths": { on: () => true, run: () => win.openPanel(1, 2) },
+        "panel-history": { on: () => true, run: () => win.openPanel(1, 3) },
         // BEGIN generated commands (scripts of the menus: File, Edit, Image, Layer, Filter)
         "save-copy": { on: () => canvas.loaded, run: () => saveDialog.open() },
         "edit-cut": { on: () => canvas.loaded, run: () => win.runCommand("edit.cut", {}) },
@@ -421,9 +435,6 @@ ApplicationWindow {
         "filter-high-pass": { on: () => canvas.loaded, run: () => win.openParams("filter-high-pass") },
         "filter-offset": { on: () => canvas.loaded, run: () => win.openParams("filter-offset") },
         // END generated commands
-        "tool-quick": { on: () => true, run: () => win.selectTool("quick") },
-        "tool-object": { on: () => true, run: () => win.selectTool("object") },
-        "tool-remove": { on: () => true, run: () => win.selectTool("remove") },
         "select-all": { on: () => canvas.loaded, run: () => { canvas.run("select.all", "{}")} },
         "select-inverse": { on: () => canvas.loaded, run: () => canvas.run("select.inverse", "{}") },
         "select-sky": { on: () => canvas.loaded, run: () => canvas.run("select.sky", "{}") },
@@ -636,6 +647,11 @@ ApplicationWindow {
     // The strip of panel icons (PhotoCraft): a click shows the panel, a click on the one in view hides the dock
     readonly property int rulerSize: 18
     property bool dockOpen: true
+    // Window > panel: shows the dock with that panel in view
+    function openPanel(group, index) {
+        dockOpen = true;
+        if (group === 0) propertiesTab = index; else if (group === 1) layersTab = index; else topTab = index;
+    }
     function showPanel(group, index) {
         const now = group === 0 ? propertiesTab : group === 1 ? layersTab : topTab;
         if (dockOpen && now === index) { dockOpen = false; return; }
