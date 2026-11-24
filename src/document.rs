@@ -259,7 +259,7 @@ pub fn probe(file: &str) -> i32 {
         ("shape.create", json!({"kind": "star", "rect": [10, 10, 80, 80], "fill": "#e0605a"})),
         ("shape.create", json!({"kind": "path", "fill": "#336699", "path": {"subpaths": [{"closed": true, "knots": [[10, 10], [80, 20], [40, 70]]}]}})),
         ("shape.create", json!({"kind": "line", "from": [0, 0], "to": [90, 90], "weight": 4, "stroke": {"color": "#000000", "width": 4}, "fill": null})),
-        ("type.create", json!({"x": 20, "y": 60, "text": "Hi", "size": 24, "color": "#ffffff"})),
+        ("type.create", json!({"x": 20, "y": 60, "text": "Hi", "size": 24, "color": "#ffffff", "font": "Inter", "weight": 700, "italic": true})),
         ("layer.translate", json!({"dx": 5, "dy": 3})),
         ("select.magicWand", json!({"x": 10, "y": 10, "tolerance": 32, "mode": "replace"})),
         ("select.lasso", json!({"points": pts})),
@@ -296,7 +296,7 @@ pub fn probe(file: &str) -> i32 {
     doc.undo();
     doc.undo();
     println!("after two undos: {} entries, applied {}", doc.history().0.as_array().map_or(0, Vec::len), doc.history().1);
-    for q in ["channel.list", "path.list", "swatches.list", "gradient.presets.list", "pattern.list"] {
+    for q in ["type.fonts", "channel.list", "path.list", "swatches.list", "gradient.presets.list", "pattern.list"] {
         println!("{q}: {:?}", doc.query(q, json!({})).map(|v| v.to_string().chars().take(600).collect::<String>()));
     }
     if changed && hidden && undone && tools_ok { 0 } else { 1 }

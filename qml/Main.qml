@@ -146,6 +146,10 @@ ApplicationWindow {
     // Text: where the field is open (item and document coordinates) and the size in points
     property var textAt: null
     property int textSize: 48
+    property string textFont: "Inter"
+    property bool textBold: false
+    property bool textItalic: false
+    readonly property var fontFamilies: { canvas.layers; try { return JSON.parse(canvas.ask("type.fonts", "{}")).families.map(f => ({ label: f, value: f })); } catch (e) { return []; } }
     function itemRect(m) {
         const a = JSON.parse(canvas.toItem(m.x, m.y)), b = JSON.parse(canvas.toItem(m.x + m.w, m.y + m.h));
         return Qt.rect(a[0], a[1], b[0] - a[0], b[1] - a[1]);
@@ -554,6 +558,9 @@ ApplicationWindow {
         Row {
             visible: win.tool === "text"
             spacing: FiliTheme.space3
+            FiliSelect { anchors.verticalCenter: parent.verticalCenter; width: 170; model: win.fontFamilies; current: win.textFont; onPicked: v => win.textFont = v }
+            FiliCheckBox { anchors.verticalCenter: parent.verticalCenter; label: Fili.tr("Bold"); checked: win.textBold; onToggled: win.textBold = !win.textBold }
+            FiliCheckBox { anchors.verticalCenter: parent.verticalCenter; label: Fili.tr("Italic"); checked: win.textItalic; onToggled: win.textItalic = !win.textItalic }
             Text { anchors.verticalCenter: parent.verticalCenter; text: Fili.tr("Size") + " " + win.textSize + " pt"; font.family: FiliTheme.font; font.pixelSize: FiliTheme.size; color: FiliTheme.text }
             FiliSlider { width: 160; anchors.verticalCenter: parent.verticalCenter; value: (win.textSize - 6) / 294; onMoved: v => win.textSize = Math.round(6 + v * 294) }
             Repeater {
@@ -1462,7 +1469,7 @@ ApplicationWindow {
             Keys.onEscapePressed: win.textAt = null
             onAccepted: {
                 if (text !== "" && win.textAt)
-                    canvas.run("type.create", JSON.stringify({ x: Math.round(win.textAt.doc[0]), y: Math.round(win.textAt.doc[1]), text: text, size: win.textSize, color: win.brushColor }));
+                    canvas.run("type.create", JSON.stringify({ x: Math.round(win.textAt.doc[0]), y: Math.round(win.textAt.doc[1]), text: text, size: win.textSize, color: win.brushColor, font: win.textFont, weight: win.textBold ? 700 : 400, italic: win.textItalic }));
                 win.textAt = null;
             }
         }
