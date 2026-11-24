@@ -275,6 +275,10 @@ pub fn probe(file: &str) -> i32 {
             Err(e) => println!("{kind}: {e}"),
         }
     }
+    let shape = doc.query("shape.create", json!({"kind": "path", "fill": "#336699", "path": {"subpaths": [{"closed": true, "knots": [[10, 10], [80, 20], [40, 70]]}]}}));
+    println!("shape.info: {:?}", shape.and_then(|_| doc.query("shape.info", json!({}))).map(|v| v.to_string().chars().take(600).collect::<String>()));
+    let moved = doc.query("path.moveAnchors", json!({"name": "layer", "layer": doc.detail()["layers"][0]["id"], "anchors": [[0, 1]], "move": [5, 5]}));
+    println!("path.moveAnchors: {:?}", moved.map(|v| v.to_string().chars().take(200).collect::<String>()));
     println!("history: {} applied {}", doc.history().0, doc.history().1);
     doc.undo();
     doc.undo();

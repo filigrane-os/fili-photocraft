@@ -230,6 +230,11 @@
           "exec": "fili-photocraft ctl --pid %pid action tool-pen"
         },
         {
+          "label": "Direct Selection",
+          "keys": "A",
+          "exec": "fili-photocraft ctl --pid %pid action tool-direct"
+        },
+        {
           "label": "Text",
           "keys": "T",
           "exec": "fili-photocraft ctl --pid %pid action tool-text"

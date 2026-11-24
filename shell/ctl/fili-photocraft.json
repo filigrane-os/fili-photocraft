@@ -116,6 +116,11 @@
       "keys": "P"
     },
     {
+      "name": "tool-direct",
+      "label": "Direct Selection",
+      "keys": "A"
+    },
+    {
       "name": "tool-text",
       "label": "Text",
       "keys": "T"

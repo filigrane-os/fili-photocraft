@@ -57,6 +57,7 @@ ApplicationWindow {
         polygon: { icon: "hexagon", tip: "Polygon", hint: "U" },
         line: { icon: "minus", tip: "Line", hint: "U" },
         pen: { icon: "pen-tool", tip: "Pen", hint: "P" },
+        direct: { icon: "pointer", tip: "Direct Selection", hint: "A" },
         text: { icon: "type", tip: "Text", hint: "T" },
         hand: { icon: "hand", tip: "Hand", hint: "H" }, zoom: { icon: "zoom-in", tip: "Zoom", hint: "Z" },
         marquee: { icon: "square-dashed", tip: "Rectangular Marquee", hint: "M" }, ellipse: { icon: "circle", tip: "Elliptical Marquee", hint: "M" },
@@ -68,7 +69,7 @@ ApplicationWindow {
         heal: { icon: "bandage", tip: "Spot Healing Brush", hint: "J" }, history: { icon: "history", tip: "History Brush", hint: "Y" }, stamp: { icon: "stamp", tip: "Clone Stamp", hint: "S" }
     })
     readonly property var toolGroups: [
-        ["move"], ["marquee", "ellipse"], ["lasso"], ["wand"], ["crop"], ["eyedropper"], ["brush", "pencil"], ["stamp", "history", "heal"], ["gradient", "bucket"], ["pen"], ["text"], ["rect", "rounded", "shapeellipse", "triangle", "star", "polygon", "line"], ["eraser"], ["blur", "sharpen", "smudge"], ["dodge", "burn", "sponge"], ["hand"], ["zoom"]
+        ["move"], ["marquee", "ellipse"], ["lasso"], ["wand"], ["crop"], ["eyedropper"], ["brush", "pencil"], ["stamp", "history", "heal"], ["gradient", "bucket"], ["pen"], ["direct"], ["text"], ["rect", "rounded", "shapeellipse", "triangle", "star", "polygon", "line"], ["eraser"], ["blur", "sharpen", "smudge"], ["dodge", "burn", "sponge"], ["hand"], ["zoom"]
     ]
     property var groupPick: ({})
     readonly property var toolModel: {
@@ -76,7 +77,7 @@ ApplicationWindow {
         toolGroups.forEach((g, i) => {
             const id = g.indexOf(tool) >= 0 ? tool : (groupPick[i] ?? g[0]);
             const t = toolInfo[id];
-            if (i === 1 || i === 6 || i === 15) out.push({ sep: true });
+            if (i === 1 || i === 6 || i === 16) out.push({ sep: true });
             out.push({ id: id, icon: t.icon, tip: Fili.tr(t.tip), hint: t.hint, variants: g.length > 1 });
         });
         return out;
@@ -170,6 +171,19 @@ ApplicationWindow {
     }
     // Size of the document in pixels, from its info line "W × H · n layers"
     readonly property var docSize: { const m = /^(\d+) × (\d+)/.exec(canvas.info); return m ? { w: Number(m[1]), h: Number(m[2]) } : { w: 0, h: 0 }; }
+    // Direct Selection: the anchor points of the shape layer in hand, and the one being dragged ({sp, k, from} in document pixels)
+    readonly property var shapeAnchors: {
+        canvas.layers;
+        if (tool !== "direct" || !activeLayer) return [];
+        try {
+            const info = JSON.parse(canvas.ask("shape.info", JSON.stringify({ layer: activeLayer.id })));
+            const out = [];
+            info.path.subpaths.forEach((sp, i) => sp.knots.forEach((k, j) => { const a = Array.isArray(k) ? k : k.anchor; out.push({ sp: i, k: j, x: a[0], y: a[1] }); }));
+            return out;
+        } catch (e) { return []; }
+    }
+    property var anchorDrag: null
+    function anchorParams(move) { return JSON.stringify({ name: "layer", layer: activeLayer.id, anchors: [[anchorDrag.sp, anchorDrag.k]], move: move }); }
     property var penPoints: []
     property string tipText: ""
     function showTip(item, text) { tipText = text; }
@@ -231,6 +245,7 @@ ApplicationWindow {
         "tool-stamp": { on: () => true, run: () => win.selectTool("stamp") },
         "tool-pen": { on: () => true, run: () => win.selectTool("pen") },
         "debug": { on: () => true, run: () => debug.open = !debug.open },
+        "tool-direct": { on: () => true, run: () => win.selectTool("direct") },
         "select-all": { on: () => canvas.loaded, run: () => { canvas.run("select.all", "{}")} },
         "select-inverse": { on: () => canvas.loaded, run: () => canvas.run("select.inverse", "{}") },
         "select-sky": { on: () => canvas.loaded, run: () => canvas.run("select.sky", "{}") },
@@ -317,6 +332,7 @@ ApplicationWindow {
     Shortcut { sequence: "Return"; enabled: win.penPoints.length > 0; onActivated: win.finishPen() }
     Shortcut { sequence: "Escape"; enabled: win.penPoints.length > 0; onActivated: win.penPoints = [] }
     Shortcut { sequence: "P"; onActivated: win.keyTool("P") }
+    Shortcut { sequence: "A"; onActivated: win.keyTool("A") }
     Shortcut { sequence: "Ctrl+Shift+L"; onActivated: win.runAction("debug") }
     Shortcut { sequence: "Ctrl+Shift+I"; onActivated: win.runAction("select-inverse") }
     Shortcut { sequence: "Ctrl+A"; onActivated: win.runAction("select-all") }
@@ -330,7 +346,7 @@ ApplicationWindow {
         closeButton: true
         onCloseRequested: win.runAction("close")
         Text {
-            visible: !win.painting && !win.shapeTool && win.tool !== "text" && win.tool !== "pen" && !win.dragTools[win.tool] && win.tool !== "lasso" && win.tool !== "wand"
+            visible: !win.painting && !win.shapeTool && win.tool !== "text" && win.tool !== "pen" && win.tool !== "direct" && !win.dragTools[win.tool] && win.tool !== "lasso" && win.tool !== "wand"
             text: win.tool === "zoom" ? Fili.tr("Click to zoom in, Alt+click to zoom out") : Fili.tr("Drag to move the image")
             font.family: FiliTheme.font
             font.pixelSize: FiliTheme.size
@@ -375,8 +391,8 @@ ApplicationWindow {
             Text { anchors.verticalCenter: parent.verticalCenter; text: win.tool === "wand" ? Fili.tr("Shift adds to the selection, Alt subtracts") : ""; font.family: FiliTheme.font; font.pixelSize: FiliTheme.size; color: FiliTheme.textSecondary }
         }
         Text {
-            visible: win.tool === "marquee" || win.tool === "ellipse" || win.tool === "lasso" || win.tool === "crop" || win.tool === "pen"
-            text: win.tool === "pen" ? Fili.tr("Click to add points, Enter or double-click to close the shape, Esc to cancel") : win.tool === "crop" ? Fili.tr("Drag the area to keep") : Fili.tr("Drag to select, click to deselect")
+            visible: win.tool === "marquee" || win.tool === "ellipse" || win.tool === "lasso" || win.tool === "crop" || win.tool === "pen" || win.tool === "direct"
+            text: win.tool === "direct" ? Fili.tr("Drag an anchor point of the selected shape") : win.tool === "pen" ? Fili.tr("Click to add points, Enter or double-click to close the shape, Esc to cancel") : win.tool === "crop" ? Fili.tr("Drag the area to keep") : Fili.tr("Drag to select, click to deselect")
             font.family: FiliTheme.font; font.pixelSize: FiliTheme.size; color: FiliTheme.textSecondary
         }
         Row {
@@ -822,7 +838,7 @@ ApplicationWindow {
             anchors.fill: parent
             enabled: canvas.loaded
             acceptedButtons: Qt.LeftButton | Qt.MiddleButton
-            cursorShape: win.tool === "text" ? Qt.IBeamCursor : win.shapeTool ? Qt.CrossCursor : win.tool === "move" ? Qt.SizeAllCursor : win.painting || win.tool === "bucket" || win.tool === "gradient" || win.tool === "eyedropper" || win.tool === "zoom" || win.dragTools[win.tool] || win.tool === "lasso" || win.tool === "wand" ? Qt.CrossCursor : pressed ? Qt.ClosedHandCursor : Qt.OpenHandCursor
+            cursorShape: win.tool === "direct" ? Qt.ArrowCursor : win.tool === "text" ? Qt.IBeamCursor : win.shapeTool ? Qt.CrossCursor : win.tool === "move" ? Qt.SizeAllCursor : win.painting || win.tool === "bucket" || win.tool === "gradient" || win.tool === "eyedropper" || win.tool === "zoom" || win.dragTools[win.tool] || win.tool === "lasso" || win.tool === "wand" ? Qt.CrossCursor : pressed ? Qt.ClosedHandCursor : Qt.OpenHandCursor
             property point last
             function addPoint(e) {
                 win.stroke = win.stroke.concat([JSON.parse(canvas.toDoc(e.x, e.y))]);
@@ -832,6 +848,11 @@ ApplicationWindow {
                 last = Qt.point(e.x, e.y);
                 if (win.dragTools[win.tool] && e.button === Qt.LeftButton) win.drag = Qt.rect(e.x, e.y, 0, 0);
                 if ((win.tool === "lasso" || win.tool === "gradient" || win.tool === "line") && e.button === Qt.LeftButton) win.lasso = [Qt.point(e.x, e.y)];
+                if (win.tool === "direct" && e.button === Qt.LeftButton) {
+                    let best = null, bestD = 10;
+                    win.shapeAnchors.forEach(a => { const p = JSON.parse(canvas.toItem(a.x, a.y)), d = Math.hypot(p[0] - e.x, p[1] - e.y); if (d < bestD) { bestD = d; best = a; } });
+                    if (best) win.anchorDrag = { sp: best.sp, k: best.k, from: JSON.parse(canvas.toDoc(e.x, e.y)) };
+                }
                 if (win.tool === "pen" && e.button === Qt.LeftButton) {
                     const f = win.penPoints[0], first = f ? JSON.parse(canvas.toItem(f[0], f[1])) : null;
                     if (first && win.penPoints.length >= 3 && Math.hypot(e.x - first[0], e.y - first[1]) < 8) win.finishPen();
@@ -873,6 +894,12 @@ ApplicationWindow {
                         canvas.run("select.deselect", "{}");
                     }
                 }
+                if (win.anchorDrag) {
+                    canvas.endPreview();
+                    const p = JSON.parse(canvas.toDoc(e.x, e.y)), move = [p[0] - win.anchorDrag.from[0], p[1] - win.anchorDrag.from[1]];
+                    if (Math.hypot(move[0], move[1]) > 0.5) canvas.run("path.moveAnchors", win.anchorParams(move));
+                    win.anchorDrag = null;
+                }
                 if (win.moveFrom) {
                     canvas.endPreview();
                     const p = JSON.parse(canvas.toDoc(e.x, e.y));
@@ -903,6 +930,10 @@ ApplicationWindow {
                 if (win.drag) win.drag = Qt.rect(win.drag.x, win.drag.y, e.x - win.drag.x, e.y - win.drag.y);
                 if (win.lasso.length > 0 && pressedButtons & Qt.LeftButton)
                     win.lasso = win.tool === "gradient" || win.tool === "line" ? [win.lasso[0], Qt.point(e.x, e.y)] : win.lasso.concat([Qt.point(e.x, e.y)]);
+                if (win.anchorDrag && pressedButtons & Qt.LeftButton) {
+                    const p = JSON.parse(canvas.toDoc(e.x, e.y));
+                    canvas.preview("path.moveAnchors", win.anchorParams([p[0] - win.anchorDrag.from[0], p[1] - win.anchorDrag.from[1]]));
+                }
                 if (win.moveFrom && pressedButtons & Qt.LeftButton) {
                     const p = JSON.parse(canvas.toDoc(e.x, e.y));
                     canvas.preview("layer.translate", JSON.stringify({ layer: win.activeLayer.id, dx: Math.round(p[0] - win.moveFrom[0]), dy: Math.round(p[1] - win.moveFrom[1]) }));
@@ -937,6 +968,21 @@ ApplicationWindow {
                 if (text !== "" && win.textAt)
                     canvas.run("type.create", JSON.stringify({ x: Math.round(win.textAt.doc[0]), y: Math.round(win.textAt.doc[1]), text: text, size: win.textSize, color: win.brushColor }));
                 win.textAt = null;
+            }
+        }
+        Canvas {
+            id: anchorsView
+            anchors.fill: parent
+            visible: win.shapeAnchors.length > 0
+            Connections { target: win; function onShapeAnchorsChanged() { anchorsView.requestPaint(); } }
+            Connections { target: canvas; function onViewKeyChanged() { anchorsView.requestPaint(); } }
+            onVisibleChanged: requestPaint()
+            onPaint: {
+                const c = getContext("2d");
+                c.reset();
+                c.strokeStyle = FiliTheme.accentColor.toString();
+                c.fillStyle = "#ffffff";
+                win.shapeAnchors.forEach(a => { const q = JSON.parse(canvas.toItem(a.x, a.y)); c.fillRect(q[0] - 3, q[1] - 3, 7, 7); c.strokeRect(q[0] - 3, q[1] - 3, 7, 7); });
             }
         }
         Canvas {
