@@ -253,6 +253,9 @@ pub fn probe(file: &str) -> i32 {
         ("paint.cloneStamp", json!({"layer": id, "points": pts, "size": 20, "hardness": 0.8, "source": [100, 100], "offset": [30, 30]})),
         ("paint.bucket", json!({"x": 10, "y": 10, "tolerance": 32, "color": "#0000ff"})),
         ("paint.gradient", json!({"from": [0, 0], "to": [100, 100], "colors": ["#ff0000", "#ffffff"]})),
+        ("paint.gradient", json!({"from": [0, 0], "to": [100, 100], "stops": [[0, "#ff0000"], [1, "#ffffff"]], "transparency": [[0, 100], [1, 0]]})),
+        ("pattern.presets.select", json!({"pattern": "Checkerboard"})),
+        ("paint.bucket", json!({"x": 20, "y": 20, "tolerance": 32, "contents": "pattern", "pattern": "Checkerboard"})),
         ("shape.create", json!({"kind": "star", "rect": [10, 10, 80, 80], "fill": "#e0605a"})),
         ("shape.create", json!({"kind": "path", "fill": "#336699", "path": {"subpaths": [{"closed": true, "knots": [[10, 10], [80, 20], [40, 70]]}]}})),
         ("shape.create", json!({"kind": "line", "from": [0, 0], "to": [90, 90], "weight": 4, "stroke": {"color": "#000000", "width": 4}, "fill": null})),
@@ -293,8 +296,8 @@ pub fn probe(file: &str) -> i32 {
     doc.undo();
     doc.undo();
     println!("after two undos: {} entries, applied {}", doc.history().0.as_array().map_or(0, Vec::len), doc.history().1);
-    for q in ["channel.list", "path.list", "swatches.list"] {
-        println!("{q}: {:?}", doc.query(q, json!({})).map(|v| v.to_string().chars().take(400).collect::<String>()));
+    for q in ["channel.list", "path.list", "swatches.list", "gradient.presets.list", "pattern.list"] {
+        println!("{q}: {:?}", doc.query(q, json!({})).map(|v| v.to_string().chars().take(600).collect::<String>()));
     }
     if changed && hidden && undone && tools_ok { 0 } else { 1 }
 }

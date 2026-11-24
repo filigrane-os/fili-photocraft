@@ -188,6 +188,13 @@ ApplicationWindow {
     }
     property var anchorDrag: null
     function anchorParams(move) { return JSON.stringify({ name: "layer", layer: activeLayer.id, anchors: [[anchorDrag.sp, anchorDrag.k]], move: move }); }
+    // Gradients and patterns of the engine; the gradient tool and the paint bucket use the ones picked in the panels
+    readonly property var gradientGroups: { canvas.layers; try { return JSON.parse(canvas.ask("gradient.presets.list", "{}")).groups; } catch (e) { return []; } }
+    readonly property var patternList: { canvas.layers; try { return JSON.parse(canvas.ask("pattern.list", "{}")); } catch (e) { return []; } }
+    property var currentGradient: ({ name: "Foreground to Background", stops: [[0, "foreground"], [1, "background"]], transparency: [] })
+    property string currentPattern: ""
+    property bool bucketPattern: false
+    function stopColor(c) { return c === "foreground" ? brushColor : c === "background" ? bgColor : c; }
     property var penPoints: []
     property string tipText: ""
     function showTip(item, text) { tipText = text; }
@@ -556,6 +563,7 @@ ApplicationWindow {
             spacing: FiliTheme.space3
             Text { anchors.verticalCenter: parent.verticalCenter; text: Fili.tr("Tolerance") + " " + win.wandTolerance; font.family: FiliTheme.font; font.pixelSize: FiliTheme.size; color: FiliTheme.text }
             FiliSlider { width: 160; anchors.verticalCenter: parent.verticalCenter; value: win.wandTolerance / 255; onMoved: v => win.wandTolerance = Math.round(v * 255) }
+            FiliCheckBox { anchors.verticalCenter: parent.verticalCenter; visible: win.tool === "bucket"; label: Fili.tr("Pattern"); checked: win.bucketPattern; onToggled: win.bucketPattern = !win.bucketPattern }
             Text { anchors.verticalCenter: parent.verticalCenter; text: win.tool === "wand" ? Fili.tr("Shift adds to the selection, Alt subtracts") : ""; font.family: FiliTheme.font; font.pixelSize: FiliTheme.size; color: FiliTheme.textSecondary }
         }
         Text {
@@ -614,7 +622,7 @@ ApplicationWindow {
             spacing: 2
             Repeater {
                 model: [
-                    { glyph: "sliders-horizontal", tip: "Properties", group: 0, index: 0 }, { glyph: "compass", tip: "Navigator", group: 2, index: 2 },
+                    { glyph: "sliders-horizontal", tip: "Properties", group: 0, index: 0 }, { glyph: "compass", tip: "Navigator", group: 0, index: 2 },
                     { glyph: "palette", tip: "Color", group: 2, index: 0 }, { glyph: "layers", tip: "Layers", group: 1, index: 0 }, { glyph: "history", tip: "History", group: 1, index: 3 }
                 ]
                 Rectangle {
@@ -646,7 +654,7 @@ ApplicationWindow {
         FiliDockGroup {
             Layout.fillWidth: true
             Layout.preferredHeight: 220
-            tabs: [Fili.tr("Color"), Fili.tr("Swatches"), Fili.tr("Navigator")]
+            tabs: [Fili.tr("Color"), Fili.tr("Swatches"), Fili.tr("Gradients"), Fili.tr("Patterns")]
             currentIndex: win.topTab
             onTabClicked: i => win.topTab = i
             Flickable {
@@ -752,48 +760,73 @@ ApplicationWindow {
                     }
                 }
                 FiliScrollBar { flick: swatchView; anchors { top: parent.top; bottom: parent.bottom; right: parent.right } }
-            }
-            Item {
-                id: navigatorView
-                // The picture of the document and the part the canvas shows (a frame), a click or a drag moves the view
-                readonly property real ratio: nav.implicitWidth > 0 ? nav.implicitWidth / nav.implicitHeight : 1
-                Image {
-                    id: nav
-                    anchors.centerIn: parent
-                    width: Math.min(parent.width - 2 * FiliTheme.space3, (parent.height - 2 * FiliTheme.space3) * navigatorView.ratio)
-                    height: width / navigatorView.ratio
-                    source: canvas.navigator
-                    cache: false
-                    fillMode: Image.Stretch
-                    Rectangle {
-                        readonly property var rect: {
-                            canvas.viewKey;
-                            if (!canvas.loaded || canvasArea.width <= 0) return null;
-                            const a = JSON.parse(canvas.toDoc(0, 0)), b = JSON.parse(canvas.toDoc(canvasArea.width, canvasArea.height));
-                            const dw = win.docSize.w, dh = win.docSize.h;
-                            if (dw <= 0 || dh <= 0) return null;
-                            const x0 = Math.max(0, a[0]) / dw, y0 = Math.max(0, a[1]) / dh, x1 = Math.min(dw, b[0]) / dw, y1 = Math.min(dh, b[1]) / dh;
-                            return Qt.rect(x0 * nav.width, y0 * nav.height, Math.max(2, (x1 - x0) * nav.width), Math.max(2, (y1 - y0) * nav.height));
+                Flickable {
+                id: gradientView
+                clip: true
+                contentHeight: gradientColumn.height + FiliTheme.space3
+                KineticScroll {}
+                Column {
+                    id: gradientColumn
+                    x: FiliTheme.space3; y: FiliTheme.space3
+                    width: gradientView.width - 2 * FiliTheme.space3
+                    spacing: FiliTheme.space2
+                    Repeater {
+                        model: win.gradientGroups
+                        Column {
+                            required property var modelData
+                            width: gradientColumn.width
+                            spacing: 3
+                            Text { text: modelData.name; font.family: FiliTheme.font; font.pixelSize: FiliTheme.sizeSmall; color: FiliTheme.muted }
+                            Repeater {
+                                model: modelData.presets
+                                Rectangle {
+                                    id: gradRow
+                                    required property var modelData
+                                    width: parent.width; height: 24; radius: 3
+                                    color: "transparent"
+                                    border { width: win.currentGradient.name === modelData.name ? 2 : 1; color: win.currentGradient.name === modelData.name ? FiliTheme.accentColor : FiliTheme.border }
+                                    Canvas {
+                                        anchors { fill: parent; margins: 2 }
+                                        onPaint: {
+                                            const c = getContext("2d");
+                                            c.reset();
+                                            const g = c.createLinearGradient(0, 0, width, 0);
+                                            gradRow.modelData.stops.forEach(s => g.addColorStop(s[0], win.stopColor(s[1])));
+                                            c.fillStyle = g;
+                                            c.fillRect(0, 0, width, height);
+                                        }
+                                        Connections { target: win; function onBrushColorChanged() { requestPaint(); } function onBgColorChanged() { requestPaint(); } }
+                                    }
+                                    MouseArea { anchors.fill: parent; onClicked: win.currentGradient = gradRow.modelData }
+                                }
+                            }
                         }
-                        visible: rect !== null
-                        x: rect ? rect.x : 0; y: rect ? rect.y : 0; width: rect ? rect.width : 0; height: rect ? rect.height : 0
-                        color: "transparent"
-                        border { width: 2; color: FiliTheme.accentColor }
-                    }
-                    MouseArea {
-                        anchors.fill: parent
-                        function go(e) { canvas.centerOn(Math.max(0, Math.min(1, e.x / nav.width)) * win.docSize.w, Math.max(0, Math.min(1, e.y / nav.height)) * win.docSize.h); }
-                        onPressed: e => go(e)
-                        onPositionChanged: e => { if (pressed) go(e); }
                     }
                 }
-                Text { anchors.centerIn: parent; visible: !canvas.loaded; text: Fili.tr("No image"); font.family: FiliTheme.font; font.pixelSize: FiliTheme.size; color: FiliTheme.textSecondary }
+                FiliScrollBar { flick: gradientView; anchors { top: parent.top; bottom: parent.bottom; right: parent.right } }
             }
+            ListView {
+                id: patternView
+                clip: true
+                model: win.patternList
+                KineticScroll {}
+                delegate: FiliSidebarRow {
+                    required property var modelData
+                    width: patternView.width
+                    label: modelData.name
+                    count: modelData.width + " × " + modelData.height
+                    selected: win.currentPattern === modelData.id
+                    onClicked: { win.currentPattern = modelData.id; win.bucketPattern = true; }
+                }
+                FiliScrollBar { flick: patternView; anchors { top: parent.top; bottom: parent.bottom; right: parent.right } }
+            }
+        }
+        }
         }
         FiliDockGroup {
             Layout.fillWidth: true
             Layout.preferredHeight: win.curvesShown || win.adjustmentSliders.length > 3 ? 440 : win.adjustmentSliders.length > 0 ? 320 : 225
-            tabs: [Fili.tr("Properties"), Fili.tr("Adjustments")]
+            tabs: [Fili.tr("Properties"), Fili.tr("Adjustments"), Fili.tr("Navigator")]
             currentIndex: win.propertiesTab
             onTabClicked: i => win.propertiesTab = i
             Item {
@@ -929,7 +962,42 @@ ApplicationWindow {
                 FiliSidebarRow { label: Fili.tr("Posterize"); enabled: canvas.loaded; onClicked: win.runAction("adjust-posterize") }
                 FiliSidebarRow { label: Fili.tr("Photo Filter"); enabled: canvas.loaded; onClicked: win.runAction("adjust-photo-filter") }
             }
-        }
+            Item {
+                id: navigatorView
+                // The picture of the document and the part the canvas shows (a frame), a click or a drag moves the view
+                readonly property real ratio: nav.implicitWidth > 0 ? nav.implicitWidth / nav.implicitHeight : 1
+                Image {
+                    id: nav
+                    anchors.centerIn: parent
+                    width: Math.min(parent.width - 2 * FiliTheme.space3, (parent.height - 2 * FiliTheme.space3) * navigatorView.ratio)
+                    height: width / navigatorView.ratio
+                    source: canvas.navigator
+                    cache: false
+                    fillMode: Image.Stretch
+                    Rectangle {
+                        readonly property var rect: {
+                            canvas.viewKey;
+                            if (!canvas.loaded || canvasArea.width <= 0) return null;
+                            const a = JSON.parse(canvas.toDoc(0, 0)), b = JSON.parse(canvas.toDoc(canvasArea.width, canvasArea.height));
+                            const dw = win.docSize.w, dh = win.docSize.h;
+                            if (dw <= 0 || dh <= 0) return null;
+                            const x0 = Math.max(0, a[0]) / dw, y0 = Math.max(0, a[1]) / dh, x1 = Math.min(dw, b[0]) / dw, y1 = Math.min(dh, b[1]) / dh;
+                            return Qt.rect(x0 * nav.width, y0 * nav.height, Math.max(2, (x1 - x0) * nav.width), Math.max(2, (y1 - y0) * nav.height));
+                        }
+                        visible: rect !== null
+                        x: rect ? rect.x : 0; y: rect ? rect.y : 0; width: rect ? rect.width : 0; height: rect ? rect.height : 0
+                        color: "transparent"
+                        border { width: 2; color: FiliTheme.accentColor }
+                    }
+                    MouseArea {
+                        anchors.fill: parent
+                        function go(e) { canvas.centerOn(Math.max(0, Math.min(1, e.x / nav.width)) * win.docSize.w, Math.max(0, Math.min(1, e.y / nav.height)) * win.docSize.h); }
+                        onPressed: e => go(e)
+                        onPositionChanged: e => { if (pressed) go(e); }
+                    }
+                }
+                Text { anchors.centerIn: parent; visible: !canvas.loaded; text: Fili.tr("No image"); font.family: FiliTheme.font; font.pixelSize: FiliTheme.size; color: FiliTheme.textSecondary }
+            }
         FiliDockGroup {
             Layout.fillWidth: true
             Layout.fillHeight: true
@@ -1225,7 +1293,7 @@ ApplicationWindow {
                 }
                 if (win.tool === "bucket" && e.button === Qt.LeftButton) {
                     const p = JSON.parse(canvas.toDoc(e.x, e.y));
-                    canvas.run("paint.bucket", JSON.stringify({ x: Math.round(p[0]), y: Math.round(p[1]), tolerance: win.wandTolerance, color: win.brushColor }));
+                    canvas.run("paint.bucket", JSON.stringify(Object.assign({ x: Math.round(p[0]), y: Math.round(p[1]), tolerance: win.wandTolerance }, win.bucketPattern && win.currentPattern !== "" ? { contents: "pattern", pattern: win.currentPattern } : { color: win.brushColor })));
                 }
                 if (win.tool === "wand" && e.button === Qt.LeftButton) {
                     const p = JSON.parse(canvas.toDoc(e.x, e.y));
@@ -1272,7 +1340,7 @@ ApplicationWindow {
                     win.lasso = [];
                     if (a[0] !== b[0] || a[1] !== b[1]) {
                         if (win.tool === "line") canvas.run("shape.create", JSON.stringify({ kind: "line", from: a, to: b, weight: Math.max(1, Math.round(win.brushSize / 4)), stroke: { color: win.brushColor, width: Math.max(1, Math.round(win.brushSize / 4)) }, fill: null }));
-                        else canvas.run("paint.gradient", JSON.stringify({ from: a, to: b, colors: [win.brushColor, win.bgColor] }));
+                        else canvas.run("paint.gradient", JSON.stringify({ from: a, to: b, stops: win.currentGradient.stops.map(s => [s[0], win.stopColor(s[1])]), transparency: win.currentGradient.transparency }));
                     }
                 } else if (win.lasso.length > 0) {
                     const pts = win.lasso.map(p => JSON.parse(canvas.toDoc(p.x, p.y)));
