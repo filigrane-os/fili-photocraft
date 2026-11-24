@@ -365,7 +365,6 @@ fn probe_menu(file: &str) -> bool {
         ("layer.layerStyle.clear", json!({})),
         ("layer.createClippingMask", json!({})),
         ("layer.releaseClippingMask", json!({})),
-        ("layer.linkLayers", json!({})),
         ("layer.flattenImage", json!({})),
         ("file.saveACopy", json!({"path": out.to_string_lossy()})),
         ("file.new", json!({"width": 640, "height": 480})),
