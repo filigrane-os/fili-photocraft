@@ -791,7 +791,8 @@ ApplicationWindow {
                     }
                 }
                 FiliScrollBar { flick: swatchView; anchors { top: parent.top; bottom: parent.bottom; right: parent.right } }
-                Flickable {
+            }
+            Flickable {
                 id: gradientView
                 clip: true
                 contentHeight: gradientColumn.height + FiliTheme.space3
@@ -851,8 +852,6 @@ ApplicationWindow {
                 }
                 FiliScrollBar { flick: patternView; anchors { top: parent.top; bottom: parent.bottom; right: parent.right } }
             }
-        }
-        }
         }
         FiliDockGroup {
             Layout.fillWidth: true
@@ -1029,6 +1028,7 @@ ApplicationWindow {
                 }
                 Text { anchors.centerIn: parent; visible: !canvas.loaded; text: Fili.tr("No image"); font.family: FiliTheme.font; font.pixelSize: FiliTheme.size; color: FiliTheme.textSecondary }
             }
+        }
         FiliDockGroup {
             Layout.fillWidth: true
             Layout.fillHeight: true
