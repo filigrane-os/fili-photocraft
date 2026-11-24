@@ -625,7 +625,7 @@ ApplicationWindow {
         }
         FiliDockGroup {
             Layout.fillWidth: true
-            Layout.preferredHeight: win.curvesShown || win.adjustmentSliders.length > 3 ? 440 : win.adjustmentSliders.length > 0 ? 320 : 170
+            Layout.preferredHeight: win.curvesShown || win.adjustmentSliders.length > 3 ? 440 : win.adjustmentSliders.length > 0 ? 320 : 225
             tabs: [Fili.tr("Properties"), Fili.tr("Adjustments")]
             currentIndex: win.propertiesTab
             onTabClicked: i => win.propertiesTab = i
@@ -742,6 +742,9 @@ ApplicationWindow {
                                 onReleased: if (win.activeLayer) win.setLayer(win.activeLayer.id, { fill: value })
                             }
                         }
+                        Rectangle { width: parent.width; height: 1; color: FiliTheme.border }
+                        Text { text: Fili.tr("Document"); font.family: FiliTheme.font; font.pixelSize: FiliTheme.size; font.weight: Font.DemiBold; color: FiliTheme.text }
+                        Text { width: parent.width; elide: Text.ElideRight; text: Fili.tr("Canvas") + "   " + win.docSize.w + " × " + win.docSize.h + " px   ·   RGB Color 8 bit"; font.family: FiliTheme.font; font.pixelSize: FiliTheme.size; color: FiliTheme.textSecondary }
                     }
                 }
             }
