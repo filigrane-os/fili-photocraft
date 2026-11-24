@@ -446,7 +446,7 @@ ApplicationWindow {
             spacing: 2
             Repeater {
                 model: [
-                    { glyph: "sliders-horizontal", tip: "Properties", group: 0, index: 0 }, { glyph: "compass", tip: "Navigator", group: 2, index: 1 },
+                    { glyph: "sliders-horizontal", tip: "Properties", group: 0, index: 0 }, { glyph: "compass", tip: "Navigator", group: 2, index: 2 },
                     { glyph: "palette", tip: "Color", group: 2, index: 0 }, { glyph: "layers", tip: "Layers", group: 1, index: 0 }, { glyph: "history", tip: "History", group: 1, index: 3 }
                 ]
                 Rectangle {
@@ -478,7 +478,7 @@ ApplicationWindow {
         FiliDockGroup {
             Layout.fillWidth: true
             Layout.preferredHeight: 230
-            tabs: [Fili.tr("Color"), Fili.tr("Navigator")]
+            tabs: [Fili.tr("Color"), Fili.tr("Swatches"), Fili.tr("Navigator")]
             currentIndex: win.topTab
             onTabClicked: i => win.topTab = i
             Flickable {
@@ -492,6 +492,53 @@ ApplicationWindow {
                     width: colorView.width - 2 * FiliTheme.space3
                     y: FiliTheme.space3
                     spacing: FiliTheme.space2
+                    Item {
+                        id: picker
+                        // The colour picker of PhotoCraft: saturation and value in the square, the hue on the strip
+                        width: parent.width
+                        height: 110
+                        property real h: 0
+                        property real sat: 0
+                        property real val: 0
+                        property bool dragging: false
+                        function fromColor(c) { const q = Qt.color(c); if (q.hsvHue >= 0) h = q.hsvHue; sat = q.hsvSaturation; val = q.hsvValue; }
+                        function apply() { win.brushColor = Qt.hsva(h, sat, val, 1).toString(); }
+                        Component.onCompleted: fromColor(win.brushColor)
+                        Connections { target: win; function onBrushColorChanged() { if (!picker.dragging) picker.fromColor(win.brushColor); } }
+                        Rectangle {
+                            id: svSquare
+                            width: parent.width - 30; height: parent.height
+                            radius: 3
+                            color: Qt.hsva(picker.h, 1, 1, 1)
+                            clip: true
+                            Rectangle { anchors.fill: parent; gradient: Gradient { orientation: Gradient.Horizontal; GradientStop { position: 0; color: "#ffffff" } GradientStop { position: 1; color: "#00ffffff" } } }
+                            Rectangle { anchors.fill: parent; gradient: Gradient { GradientStop { position: 0; color: "#00000000" } GradientStop { position: 1; color: "#000000" } } }
+                            Rectangle { x: picker.sat * parent.width - 5; y: (1 - picker.val) * parent.height - 5; width: 10; height: 10; radius: 5; color: "transparent"; border { width: 2; color: "#ffffff" } }
+                            MouseArea {
+                                anchors.fill: parent
+                                function pick(e) { picker.dragging = true; picker.sat = Math.max(0, Math.min(1, e.x / width)); picker.val = 1 - Math.max(0, Math.min(1, e.y / height)); picker.apply(); }
+                                onPressed: e => pick(e)
+                                onPositionChanged: e => pick(e)
+                                onReleased: picker.dragging = false
+                            }
+                        }
+                        Rectangle {
+                            x: parent.width - 20; width: 20; height: parent.height
+                            radius: 3
+                            gradient: Gradient {
+                                GradientStop { position: 0; color: Qt.hsva(0, 1, 1, 1) } GradientStop { position: 1 / 6; color: Qt.hsva(1 / 6, 1, 1, 1) } GradientStop { position: 2 / 6; color: Qt.hsva(2 / 6, 1, 1, 1) }
+                                GradientStop { position: 3 / 6; color: Qt.hsva(3 / 6, 1, 1, 1) } GradientStop { position: 4 / 6; color: Qt.hsva(4 / 6, 1, 1, 1) } GradientStop { position: 5 / 6; color: Qt.hsva(5 / 6, 1, 1, 1) } GradientStop { position: 1; color: Qt.hsva(0.999, 1, 1, 1) }
+                            }
+                            Rectangle { x: -2; y: picker.h * parent.height - 2; width: parent.width + 4; height: 4; radius: 2; color: "transparent"; border { width: 2; color: "#ffffff" } }
+                            MouseArea {
+                                anchors.fill: parent
+                                function pick(e) { picker.dragging = true; picker.h = Math.max(0, Math.min(0.999, e.y / height)); picker.apply(); }
+                                onPressed: e => pick(e)
+                                onPositionChanged: e => pick(e)
+                                onReleased: picker.dragging = false
+                            }
+                        }
+                    }
                     Row {
                         spacing: FiliTheme.space3
                         Rectangle { width: 28; height: 28; radius: 3; color: win.brushColor; border { width: 1; color: FiliTheme.border } }
@@ -499,11 +546,25 @@ ApplicationWindow {
                         Text { anchors.verticalCenter: parent.verticalCenter; text: win.brushColor; font.family: FiliTheme.font; font.pixelSize: FiliTheme.size; color: FiliTheme.textSecondary }
                         FiliButton { anchors.verticalCenter: parent.verticalCenter; label: Fili.tr("Swap"); onClicked: { const c = win.brushColor; win.brushColor = win.bgColor; win.bgColor = c; } }
                     }
+                }
+                FiliScrollBar { flick: colorView; anchors { top: parent.top; bottom: parent.bottom; right: parent.right } }
+            }
+            Flickable {
+                id: swatchView
+                clip: true
+                contentHeight: swatchColumn.height + FiliTheme.space3
+                KineticScroll {}
+                Column {
+                    id: swatchColumn
+                    x: FiliTheme.space3
+                    y: FiliTheme.space3
+                    width: swatchView.width - 2 * FiliTheme.space3
+                    spacing: FiliTheme.space2
                     Repeater {
                         model: win.swatchGroups
                         Column {
                             required property var modelData
-                            width: colorColumn.width
+                            width: swatchColumn.width
                             spacing: FiliTheme.space1
                             Text { text: modelData.name; font.family: FiliTheme.font; font.pixelSize: FiliTheme.sizeSmall; color: FiliTheme.muted }
                             Flow {
@@ -522,7 +583,7 @@ ApplicationWindow {
                         }
                     }
                 }
-                FiliScrollBar { flick: colorView; anchors { top: parent.top; bottom: parent.bottom; right: parent.right } }
+                FiliScrollBar { flick: swatchView; anchors { top: parent.top; bottom: parent.bottom; right: parent.right } }
             }
             Item {
                 id: navigatorView
