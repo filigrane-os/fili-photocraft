@@ -428,6 +428,7 @@ ApplicationWindow {
     }
 
     // The strip of panel icons (PhotoCraft): a click shows the panel, a click on the one in view hides the dock
+    readonly property int rulerSize: 18
     property bool dockOpen: true
     function showPanel(group, index) {
         const now = group === 0 ? propertiesTab : group === 1 ? layersTab : topTab;
@@ -944,10 +945,60 @@ ApplicationWindow {
         height: implicitHeight
         closable: false
         detachable: false
-        model: canvas.loaded ? [canvas.title + " @ " + (canvas.zoom * 100).toFixed(1) + "% (RGB/8)"] : []
+        model: canvas.loaded ? [canvas.title + " @ " + Math.round(canvas.zoom * 100) + "%"] : []
     }
+    // Rulers in document pixels along the top and the left of the canvas: a tick every step chosen to be at least 70 px apart
+    Repeater {
+        model: [true, false]
+        Canvas {
+            id: ruler
+            required property bool modelData
+            x: modelData ? canvasArea.x : canvasArea.x - win.rulerSize
+            y: modelData ? canvasArea.y - win.rulerSize : canvasArea.y
+            width: modelData ? canvasArea.width : win.rulerSize
+            height: modelData ? win.rulerSize : canvasArea.height
+            visible: canvas.loaded
+            Connections { target: canvas; function onViewKeyChanged() { ruler.requestPaint(); } }
+            onWidthChanged: requestPaint()
+            onHeightChanged: requestPaint()
+            onVisibleChanged: requestPaint()
+            onPaint: {
+                const c = getContext("2d");
+                c.reset();
+                c.fillStyle = FiliTheme.background.toString();
+                c.fillRect(0, 0, width, height);
+                const horizontal = modelData, zoom = canvas.zoom;
+                if (!canvas.loaded || zoom <= 0) return;
+                const origin = JSON.parse(canvas.toDoc(0, 0))[horizontal ? 0 : 1];
+                const length = horizontal ? width : height;
+                const steps = [1, 2, 5, 10, 20, 50, 100, 200, 500, 1000, 2000, 5000, 10000];
+                const step = steps.find(v => v * zoom >= 70) ?? 10000;
+                const minor = step / 5;
+                c.strokeStyle = FiliTheme.muted.toString();
+                c.fillStyle = FiliTheme.textSecondary.toString();
+                c.font = "9px sans-serif";
+                c.lineWidth = 1;
+                c.beginPath();
+                for (let d = Math.floor(origin / minor) * minor; (d - origin) * zoom < length; d += minor) {
+                    const p = Math.round((d - origin) * zoom) + 0.5;
+                    if (p < 0) continue;
+                    const major = Math.abs(d / step - Math.round(d / step)) < 1e-6;
+                    const len = major ? win.rulerSize : 5;
+                    if (horizontal) { c.moveTo(p, win.rulerSize - len); c.lineTo(p, win.rulerSize); } else { c.moveTo(win.rulerSize - len, p); c.lineTo(win.rulerSize, p); }
+                }
+                c.stroke();
+                for (let d = Math.ceil(origin / step) * step; (d - origin) * zoom < length; d += step) {
+                    const p = (d - origin) * zoom;
+                    if (p < 0) continue;
+                    if (horizontal) c.fillText(String(Math.round(d)), p + 3, 9);
+                    else { c.save(); c.translate(9, p + 3); c.rotate(-Math.PI / 2); c.textAlign = "right"; c.fillText(String(Math.round(d)), 0, 0); c.restore(); }
+                }
+            }
+        }
+    }
+
     Rectangle {
-        anchors { left: toolStrip.right; right: panelBar.left; top: documentTab.bottom; bottom: debug.top }
+        anchors { left: toolStrip.right; leftMargin: win.rulerSize; right: panelBar.left; top: documentTab.bottom; topMargin: win.rulerSize; bottom: debug.top }
         id: canvasArea
         color: FiliTheme.backgroundDeep
 
