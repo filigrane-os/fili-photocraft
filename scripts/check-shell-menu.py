@@ -11,7 +11,7 @@ qml = (root / "qml/Main.qml").read_text()
 actions = set(re.findall(r'^\s+"([a-z-]+)": \{ on:', qml, re.M))
 shortcuts = set(re.findall(r'Shortcut \{ sequence: "([^"]+)"', qml)) | set(re.findall(r'sequence: "([^"]+)"', qml))
 # Actions without a menu entry: none yet
-without_menu = set()
+without_menu = {"pointer-press", "pointer-move", "pointer-release"}  # drive the tools without a mouse (automation, tests)
 errors = []
 if not (root / "shell/lia/fili-photocraft.md").is_file():
     errors.append("brief of Lia missing: shell/lia/fili-photocraft.md")

@@ -776,6 +776,21 @@
       "label": "History"
     },
     {
+      "name": "pointer-press",
+      "label": "Press on the canvas (alt, shift)",
+      "args": "POINT [MODIFIER]"
+    },
+    {
+      "name": "pointer-move",
+      "label": "Move on the canvas",
+      "args": "POINT"
+    },
+    {
+      "name": "pointer-release",
+      "label": "Release on the canvas",
+      "args": "POINT"
+    },
+    {
       "name": "debug",
       "label": "Debug Logs",
       "keys": "Ctrl+Shift+L"

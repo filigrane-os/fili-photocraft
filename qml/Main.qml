@@ -108,6 +108,135 @@ ApplicationWindow {
         p.stroke = shapeStroke ? { color: bgColor, width: shapeStrokeWidth } : null;
         return p;
     }
+    // The pointer on the canvas, one function per event so that the tools can be driven without a mouse (`ctl action pointer-press X,Y`)
+    // e = { x, y, button, modifiers, buttons } in the coordinates of the canvas item
+    property point lastPoint
+    function addStrokePoint(e) {
+        stroke = stroke.concat([JSON.parse(canvas.toDoc(e.x, e.y))]);
+        if (tool !== "remove") canvas.preview(strokeTools[tool], strokeParams());
+    }
+    function pointerPress(e) {
+                win.lastPoint = Qt.point(e.x, e.y);
+                if (win.dragTools[win.tool] && e.button === Qt.LeftButton) win.drag = Qt.rect(e.x, e.y, 0, 0);
+                if ((win.tool === "lasso" || win.tool === "gradient" || win.tool === "line") && e.button === Qt.LeftButton) win.lasso = [Qt.point(e.x, e.y)];
+                if (win.tool === "direct" && e.button === Qt.LeftButton) {
+                    let best = null, bestD = 10;
+                    win.shapeAnchors.forEach(a => { const p = JSON.parse(canvas.toItem(a.x, a.y)), d = Math.hypot(p[0] - e.x, p[1] - e.y); if (d < bestD) { bestD = d; best = a; } });
+                    if (best) win.anchorDrag = { sp: best.sp, k: best.k, from: JSON.parse(canvas.toDoc(e.x, e.y)) };
+                }
+                if (win.tool === "pen" && e.button === Qt.LeftButton) {
+                    const f = win.penPoints[0], first = f ? JSON.parse(canvas.toItem(f[0], f[1])) : null;
+                    if (first && win.penPoints.length >= 3 && Math.hypot(e.x - first[0], e.y - first[1]) < 8) win.finishPen();
+                    else win.penPoints = win.penPoints.concat([JSON.parse(canvas.toDoc(e.x, e.y))]);
+                }
+                if (win.tool === "text" && e.button === Qt.LeftButton) {
+                    // A click on a type layer edits its text; elsewhere it starts a new one
+                    const doc = JSON.parse(canvas.toDoc(e.x, e.y));
+                    let hit = null, existing = "";
+                    try {
+                        hit = JSON.parse(canvas.ask("type.hitTest", JSON.stringify({ x: Math.round(doc[0]), y: Math.round(doc[1]) })));
+                        if (hit) existing = JSON.parse(canvas.ask("type.info", JSON.stringify({ layer: hit.layer }))).text ?? "";
+                    } catch (err) { hit = null; }
+                    win.textAt = { x: e.x, y: e.y, doc: doc, layer: hit ? hit.layer : null };
+                    textInput.text = existing;
+                    textInput.forceActiveFocus();
+                }
+                if (win.tool === "move" && e.button === Qt.LeftButton) {
+                    const p = JSON.parse(canvas.toDoc(e.x, e.y));
+                    if (win.autoSelect) canvas.run("layer.pickAt", JSON.stringify({ x: Math.round(p[0]), y: Math.round(p[1]), target: win.autoTarget, select: true }));
+                    if (win.activeLayer) win.moveFrom = p;
+                }
+                if (win.tool === "eyedropper" && e.button === Qt.LeftButton) {
+                    const p = JSON.parse(canvas.toDoc(e.x, e.y)), c = canvas.pixelAt(p[0], p[1]);
+                    if (c !== "") { if (e.modifiers & Qt.AltModifier) win.bgColor = c; else win.brushColor = c; }
+                }
+                if (win.tool === "bucket" && e.button === Qt.LeftButton) {
+                    const p = JSON.parse(canvas.toDoc(e.x, e.y));
+                    canvas.run("paint.bucket", JSON.stringify(Object.assign({ x: Math.round(p[0]), y: Math.round(p[1]), tolerance: win.wandTolerance }, win.bucketPattern && win.currentPattern !== "" ? { contents: "pattern", pattern: win.currentPattern } : { color: win.brushColor })));
+                }
+                if (win.tool === "wand" && e.button === Qt.LeftButton) {
+                    const p = JSON.parse(canvas.toDoc(e.x, e.y));
+                    canvas.run("select.magicWand", JSON.stringify({ x: Math.round(p[0]), y: Math.round(p[1]), tolerance: win.wandTolerance, mode: e.modifiers & Qt.ShiftModifier ? "add" : e.modifiers & Qt.AltModifier ? "subtract" : "replace" }));
+                }
+                if (win.tool === "stamp" && e.button === Qt.LeftButton && e.modifiers & Qt.AltModifier) {
+                    win.stampSource = JSON.parse(canvas.toDoc(e.x, e.y)); win.stampOffset = null;
+                } else if (win.painting && e.button === Qt.LeftButton && win.activeLayer) { win.stroke = []; win.addStrokePoint(e); }
+    }
+    function pointerRelease(e) {
+                if (win.drag) {
+                    const d = win.drag, a = JSON.parse(canvas.toDoc(d.x, d.y)), b = JSON.parse(canvas.toDoc(d.x + d.width, d.y + d.height));
+                    win.drag = null;
+                    const r = { x: Math.round(Math.min(a[0], b[0])), y: Math.round(Math.min(a[1], b[1])), w: Math.round(Math.abs(b[0] - a[0])), h: Math.round(Math.abs(b[1] - a[1])) };
+                    if (r.w > 0 && r.h > 0) {
+                        if (win.shapeKinds[win.tool] !== undefined) {
+                            canvas.run("shape.create", JSON.stringify(win.shapeParams({ kind: win.shapeKinds[win.tool], rect: [r.x, r.y, r.w, r.h] })));
+                        } else {
+                            const params = { x: r.x, y: r.y, width: r.w, height: r.h };
+                            if (win.tool === "ellipse") params.ellipse = true;
+                            if (win.tool === "object") canvas.run("select.object", JSON.stringify({ rect: [r.x, r.y, r.w, r.h], sampleAllLayers: true }));
+                            else canvas.run(win.tool === "crop" ? "image.crop" : "select.rect", JSON.stringify(params));
+                        }
+                        if (win.tool === "crop") canvas.zoomFit();
+                    } else if (win.tool === "marquee" || win.tool === "ellipse" || win.tool === "object") {
+                        canvas.run("select.deselect", "{}");
+                    }
+                }
+                if (win.anchorDrag) {
+                    canvas.endPreview();
+                    const p = JSON.parse(canvas.toDoc(e.x, e.y)), move = [p[0] - win.anchorDrag.from[0], p[1] - win.anchorDrag.from[1]];
+                    if (Math.hypot(move[0], move[1]) > 0.5) canvas.run("path.moveAnchors", win.anchorParams(move));
+                    win.anchorDrag = null;
+                }
+                if (win.moveFrom) {
+                    canvas.endPreview();
+                    const p = JSON.parse(canvas.toDoc(e.x, e.y));
+                    const dx = Math.round(p[0] - win.moveFrom[0]), dy = Math.round(p[1] - win.moveFrom[1]);
+                    win.moveFrom = null;
+                    if (dx !== 0 || dy !== 0) canvas.run("layer.translate", JSON.stringify({ layer: win.activeLayer.id, dx: dx, dy: dy }));
+                }
+                if (win.lasso.length > 0 && (win.tool === "gradient" || win.tool === "line")) {
+                    const a = JSON.parse(canvas.toDoc(win.lasso[0].x, win.lasso[0].y)), z = win.lasso[win.lasso.length - 1];
+                    const b = JSON.parse(canvas.toDoc(z.x, z.y));
+                    win.lasso = [];
+                    if (a[0] !== b[0] || a[1] !== b[1]) {
+                        if (win.tool === "line") canvas.run("shape.create", JSON.stringify({ kind: "line", from: a, to: b, weight: win.shapeStrokeWidth, stroke: { color: win.brushColor, width: win.shapeStrokeWidth }, fill: null }));
+                        else canvas.run("paint.gradient", JSON.stringify({ from: a, to: b, stops: win.currentGradient.stops.map(s => [s[0], win.stopColor(s[1])]), transparency: win.currentGradient.transparency }));
+                    }
+                } else if (win.lasso.length > 0) {
+                    const pts = win.lasso.map(p => JSON.parse(canvas.toDoc(p.x, p.y)));
+                    win.lasso = [];
+                    if (pts.length >= 3) canvas.run("select.lasso", JSON.stringify({ points: pts })); else canvas.run("select.deselect", "{}");
+                }
+                if (win.stroke.length > 0) {
+                    canvas.endPreview();
+                    canvas.run(win.strokeTools[win.tool], win.strokeParams());
+                    win.stroke = [];
+                }
+    }
+    function pointerMove(e) {
+                if (win.drag) win.drag = Qt.rect(win.drag.x, win.drag.y, e.x - win.drag.x, e.y - win.drag.y);
+                if (win.lasso.length > 0 && e.buttons & Qt.LeftButton)
+                    win.lasso = win.tool === "gradient" || win.tool === "line" ? [win.lasso[0], Qt.point(e.x, e.y)] : win.lasso.concat([Qt.point(e.x, e.y)]);
+                if (win.anchorDrag && e.buttons & Qt.LeftButton) {
+                    const p = JSON.parse(canvas.toDoc(e.x, e.y));
+                    canvas.preview("path.moveAnchors", win.anchorParams([p[0] - win.anchorDrag.from[0], p[1] - win.anchorDrag.from[1]]));
+                }
+                if (win.moveFrom && e.buttons & Qt.LeftButton) {
+                    const p = JSON.parse(canvas.toDoc(e.x, e.y));
+                    canvas.preview("layer.translate", JSON.stringify({ layer: win.activeLayer.id, dx: Math.round(p[0] - win.moveFrom[0]), dy: Math.round(p[1] - win.moveFrom[1]) }));
+                }
+                if (win.stroke.length > 0 && e.buttons & Qt.LeftButton) win.addStrokePoint(e);
+                if (win.tool === "hand" || e.buttons & Qt.MiddleButton) {
+                    canvas.panBy(e.x - win.lastPoint.x, e.y - win.lastPoint.y);
+                    win.lastPoint = Qt.point(e.x, e.y);
+                }
+    }
+    // `ctl action pointer-press|pointer-move|pointer-release "X,Y[,alt|shift]"`
+    function pointerFromArg(arg, buttons) {
+        const parts = String(arg).split(",");
+        const mods = parts[2] === "alt" ? Qt.AltModifier : parts[2] === "shift" ? Qt.ShiftModifier : 0;
+        return { x: Number(parts[0]), y: Number(parts[1]), button: Qt.LeftButton, modifiers: mods, buttons: buttons };
+    }
     function finishPen() {
         const pts = penPoints.filter((p, i, a) => i === 0 || Math.hypot(p[0] - a[i - 1][0], p[1] - a[i - 1][1]) > 1);
         penPoints = [];
@@ -472,6 +601,9 @@ ApplicationWindow {
         "filter-high-pass": { on: () => canvas.loaded, run: () => win.openParams("filter-high-pass") },
         "filter-offset": { on: () => canvas.loaded, run: () => win.openParams("filter-offset") },
         // END generated commands
+        "pointer-press": { on: () => canvas.loaded, run: (arg) => win.pointerPress(win.pointerFromArg(arg, Qt.LeftButton)) },
+        "pointer-move": { on: () => canvas.loaded, run: (arg) => win.pointerMove(win.pointerFromArg(arg, Qt.LeftButton)) },
+        "pointer-release": { on: () => canvas.loaded, run: (arg) => win.pointerRelease(win.pointerFromArg(arg, 0)) },
         "select-all": { on: () => canvas.loaded, run: () => { canvas.run("select.all", "{}")} },
         "select-inverse": { on: () => canvas.loaded, run: () => canvas.run("select.inverse", "{}") },
         "select-sky": { on: () => canvas.loaded, run: () => canvas.run("select.sky", "{}") },
@@ -507,7 +639,8 @@ ApplicationWindow {
     function stateJson() {
         return {
             tool: tool, loaded: canvas.loaded, name: canvas.title, info: canvas.info, zoom: canvas.zoom, canUndo: canvas.canUndo, canRedo: canvas.canRedo,
-            layers: layerList.length, activeLayer: activeLayer ? activeLayer.name : "", error: canvas.error
+            layers: layerList.length, activeLayer: activeLayer ? activeLayer.name : "", error: canvas.error,
+            view: { w: canvas.width, h: canvas.height }, selection: canvas.selection, history: historyState.names, lastStep: historyState.names.length > 0 ? historyState.names[historyState.names.length - 1] : ""
         };
     }
     Connections {
@@ -1422,127 +1555,9 @@ ApplicationWindow {
             enabled: canvas.loaded
             acceptedButtons: Qt.LeftButton | Qt.MiddleButton
             cursorShape: win.tool === "direct" ? Qt.ArrowCursor : win.tool === "text" ? Qt.IBeamCursor : win.shapeTool ? Qt.CrossCursor : win.tool === "move" ? Qt.SizeAllCursor : win.painting || win.tool === "bucket" || win.tool === "gradient" || win.tool === "eyedropper" || win.tool === "zoom" || win.dragTools[win.tool] || win.tool === "lasso" || win.tool === "wand" ? Qt.CrossCursor : pressed ? Qt.ClosedHandCursor : Qt.OpenHandCursor
-            property point last
-            function addPoint(e) {
-                win.stroke = win.stroke.concat([JSON.parse(canvas.toDoc(e.x, e.y))]);
-                if (win.tool !== "remove") canvas.preview(win.strokeTools[win.tool], win.strokeParams());
-            }
-            onPressed: e => {
-                last = Qt.point(e.x, e.y);
-                if (win.dragTools[win.tool] && e.button === Qt.LeftButton) win.drag = Qt.rect(e.x, e.y, 0, 0);
-                if ((win.tool === "lasso" || win.tool === "gradient" || win.tool === "line") && e.button === Qt.LeftButton) win.lasso = [Qt.point(e.x, e.y)];
-                if (win.tool === "direct" && e.button === Qt.LeftButton) {
-                    let best = null, bestD = 10;
-                    win.shapeAnchors.forEach(a => { const p = JSON.parse(canvas.toItem(a.x, a.y)), d = Math.hypot(p[0] - e.x, p[1] - e.y); if (d < bestD) { bestD = d; best = a; } });
-                    if (best) win.anchorDrag = { sp: best.sp, k: best.k, from: JSON.parse(canvas.toDoc(e.x, e.y)) };
-                }
-                if (win.tool === "pen" && e.button === Qt.LeftButton) {
-                    const f = win.penPoints[0], first = f ? JSON.parse(canvas.toItem(f[0], f[1])) : null;
-                    if (first && win.penPoints.length >= 3 && Math.hypot(e.x - first[0], e.y - first[1]) < 8) win.finishPen();
-                    else win.penPoints = win.penPoints.concat([JSON.parse(canvas.toDoc(e.x, e.y))]);
-                }
-                if (win.tool === "text" && e.button === Qt.LeftButton) {
-                    // A click on a type layer edits its text; elsewhere it starts a new one
-                    const doc = JSON.parse(canvas.toDoc(e.x, e.y));
-                    let hit = null, existing = "";
-                    try {
-                        hit = JSON.parse(canvas.ask("type.hitTest", JSON.stringify({ x: Math.round(doc[0]), y: Math.round(doc[1]) })));
-                        if (hit) existing = JSON.parse(canvas.ask("type.info", JSON.stringify({ layer: hit.layer }))).text ?? "";
-                    } catch (err) { hit = null; }
-                    win.textAt = { x: e.x, y: e.y, doc: doc, layer: hit ? hit.layer : null };
-                    textInput.text = existing;
-                    textInput.forceActiveFocus();
-                }
-                if (win.tool === "move" && e.button === Qt.LeftButton) {
-                    const p = JSON.parse(canvas.toDoc(e.x, e.y));
-                    if (win.autoSelect) canvas.run("layer.pickAt", JSON.stringify({ x: Math.round(p[0]), y: Math.round(p[1]), target: win.autoTarget, select: true }));
-                    if (win.activeLayer) win.moveFrom = p;
-                }
-                if (win.tool === "eyedropper" && e.button === Qt.LeftButton) {
-                    const p = JSON.parse(canvas.toDoc(e.x, e.y)), c = canvas.pixelAt(p[0], p[1]);
-                    if (c !== "") { if (e.modifiers & Qt.AltModifier) win.bgColor = c; else win.brushColor = c; }
-                }
-                if (win.tool === "bucket" && e.button === Qt.LeftButton) {
-                    const p = JSON.parse(canvas.toDoc(e.x, e.y));
-                    canvas.run("paint.bucket", JSON.stringify(Object.assign({ x: Math.round(p[0]), y: Math.round(p[1]), tolerance: win.wandTolerance }, win.bucketPattern && win.currentPattern !== "" ? { contents: "pattern", pattern: win.currentPattern } : { color: win.brushColor })));
-                }
-                if (win.tool === "wand" && e.button === Qt.LeftButton) {
-                    const p = JSON.parse(canvas.toDoc(e.x, e.y));
-                    canvas.run("select.magicWand", JSON.stringify({ x: Math.round(p[0]), y: Math.round(p[1]), tolerance: win.wandTolerance, mode: e.modifiers & Qt.ShiftModifier ? "add" : e.modifiers & Qt.AltModifier ? "subtract" : "replace" }));
-                }
-                if (win.tool === "stamp" && e.button === Qt.LeftButton && e.modifiers & Qt.AltModifier) {
-                    win.stampSource = JSON.parse(canvas.toDoc(e.x, e.y)); win.stampOffset = null;
-                } else if (win.painting && e.button === Qt.LeftButton && win.activeLayer) { win.stroke = []; addPoint(e); }
-            }
-            onReleased: e => {
-                if (win.drag) {
-                    const d = win.drag, a = JSON.parse(canvas.toDoc(d.x, d.y)), b = JSON.parse(canvas.toDoc(d.x + d.width, d.y + d.height));
-                    win.drag = null;
-                    const r = { x: Math.round(Math.min(a[0], b[0])), y: Math.round(Math.min(a[1], b[1])), w: Math.round(Math.abs(b[0] - a[0])), h: Math.round(Math.abs(b[1] - a[1])) };
-                    if (r.w > 0 && r.h > 0) {
-                        if (win.shapeKinds[win.tool] !== undefined) {
-                            canvas.run("shape.create", JSON.stringify(win.shapeParams({ kind: win.shapeKinds[win.tool], rect: [r.x, r.y, r.w, r.h] })));
-                        } else {
-                            const params = { x: r.x, y: r.y, width: r.w, height: r.h };
-                            if (win.tool === "ellipse") params.ellipse = true;
-                            if (win.tool === "object") canvas.run("select.object", JSON.stringify({ rect: [r.x, r.y, r.w, r.h], sampleAllLayers: true }));
-                            else canvas.run(win.tool === "crop" ? "image.crop" : "select.rect", JSON.stringify(params));
-                        }
-                        if (win.tool === "crop") canvas.zoomFit();
-                    } else if (win.tool === "marquee" || win.tool === "ellipse" || win.tool === "object") {
-                        canvas.run("select.deselect", "{}");
-                    }
-                }
-                if (win.anchorDrag) {
-                    canvas.endPreview();
-                    const p = JSON.parse(canvas.toDoc(e.x, e.y)), move = [p[0] - win.anchorDrag.from[0], p[1] - win.anchorDrag.from[1]];
-                    if (Math.hypot(move[0], move[1]) > 0.5) canvas.run("path.moveAnchors", win.anchorParams(move));
-                    win.anchorDrag = null;
-                }
-                if (win.moveFrom) {
-                    canvas.endPreview();
-                    const p = JSON.parse(canvas.toDoc(e.x, e.y));
-                    const dx = Math.round(p[0] - win.moveFrom[0]), dy = Math.round(p[1] - win.moveFrom[1]);
-                    win.moveFrom = null;
-                    if (dx !== 0 || dy !== 0) canvas.run("layer.translate", JSON.stringify({ layer: win.activeLayer.id, dx: dx, dy: dy }));
-                }
-                if (win.lasso.length > 0 && (win.tool === "gradient" || win.tool === "line")) {
-                    const a = JSON.parse(canvas.toDoc(win.lasso[0].x, win.lasso[0].y)), z = win.lasso[win.lasso.length - 1];
-                    const b = JSON.parse(canvas.toDoc(z.x, z.y));
-                    win.lasso = [];
-                    if (a[0] !== b[0] || a[1] !== b[1]) {
-                        if (win.tool === "line") canvas.run("shape.create", JSON.stringify({ kind: "line", from: a, to: b, weight: win.shapeStrokeWidth, stroke: { color: win.brushColor, width: win.shapeStrokeWidth }, fill: null }));
-                        else canvas.run("paint.gradient", JSON.stringify({ from: a, to: b, stops: win.currentGradient.stops.map(s => [s[0], win.stopColor(s[1])]), transparency: win.currentGradient.transparency }));
-                    }
-                } else if (win.lasso.length > 0) {
-                    const pts = win.lasso.map(p => JSON.parse(canvas.toDoc(p.x, p.y)));
-                    win.lasso = [];
-                    if (pts.length >= 3) canvas.run("select.lasso", JSON.stringify({ points: pts })); else canvas.run("select.deselect", "{}");
-                }
-                if (win.stroke.length > 0) {
-                    canvas.endPreview();
-                    canvas.run(win.strokeTools[win.tool], win.strokeParams());
-                    win.stroke = [];
-                }
-            }
-            onPositionChanged: e => {
-                if (win.drag) win.drag = Qt.rect(win.drag.x, win.drag.y, e.x - win.drag.x, e.y - win.drag.y);
-                if (win.lasso.length > 0 && pressedButtons & Qt.LeftButton)
-                    win.lasso = win.tool === "gradient" || win.tool === "line" ? [win.lasso[0], Qt.point(e.x, e.y)] : win.lasso.concat([Qt.point(e.x, e.y)]);
-                if (win.anchorDrag && pressedButtons & Qt.LeftButton) {
-                    const p = JSON.parse(canvas.toDoc(e.x, e.y));
-                    canvas.preview("path.moveAnchors", win.anchorParams([p[0] - win.anchorDrag.from[0], p[1] - win.anchorDrag.from[1]]));
-                }
-                if (win.moveFrom && pressedButtons & Qt.LeftButton) {
-                    const p = JSON.parse(canvas.toDoc(e.x, e.y));
-                    canvas.preview("layer.translate", JSON.stringify({ layer: win.activeLayer.id, dx: Math.round(p[0] - win.moveFrom[0]), dy: Math.round(p[1] - win.moveFrom[1]) }));
-                }
-                if (win.stroke.length > 0 && pressedButtons & Qt.LeftButton) addPoint(e);
-                if (win.tool === "hand" || pressedButtons & Qt.MiddleButton) {
-                    canvas.panBy(e.x - last.x, e.y - last.y);
-                    last = Qt.point(e.x, e.y);
-                }
-            }
+            onPressed: e => win.pointerPress({ x: e.x, y: e.y, button: e.button, modifiers: e.modifiers, buttons: pressedButtons })
+            onReleased: e => win.pointerRelease({ x: e.x, y: e.y, button: e.button, modifiers: e.modifiers, buttons: 0 })
+            onPositionChanged: e => win.pointerMove({ x: e.x, y: e.y, button: 0, modifiers: e.modifiers, buttons: pressedButtons })
             onClicked: e => { if (win.tool === "zoom") canvas.zoomAt(e.modifiers & Qt.AltModifier ? 1 / 1.5 : 1.5, e.x, e.y); }
             onDoubleClicked: { if (win.tool === "hand") canvas.zoomFit(); else if (win.tool === "pen") win.finishPen(); }
             onWheel: e => canvas.zoomAt(Math.pow(1.0015, e.angleDelta.y), e.x, e.y)

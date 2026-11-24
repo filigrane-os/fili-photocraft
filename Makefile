@@ -21,7 +21,7 @@ TARGET_DIR ?= $(if $(CARGO_TARGET_DIR),$(CARGO_TARGET_DIR),target)
 QMAKE ?= $(firstword $(wildcard /usr/lib/qt6/bin/qmake6 /usr/lib64/qt6/bin/qmake6) $(shell command -v qmake6 qmake-qt6 2>/dev/null))
 export QMAKE
 
-.PHONY: all build dev run test install install-data uninstall
+.PHONY: all build dev run test test-tools install install-data uninstall
 
 all: build
 
@@ -43,6 +43,10 @@ test:
 	$(CARGO) test --release
 	python3 -I scripts/check-shell-menu.py
 	python3 -I scripts/fili-api-lint --app .
+
+# Drives every tool of the window without a mouse (needs `make dev` first): scripts/test-tools.py
+test-tools:
+	python3 -I scripts/test-tools.py
 
 install: build install-data
 	install -Dm755 $(TARGET_DIR)/release/fili-photocraft $(DESTDIR)$(BINDIR)/fili-photocraft
