@@ -1434,7 +1434,18 @@ ApplicationWindow {
                     if (first && win.penPoints.length >= 3 && Math.hypot(e.x - first[0], e.y - first[1]) < 8) win.finishPen();
                     else win.penPoints = win.penPoints.concat([JSON.parse(canvas.toDoc(e.x, e.y))]);
                 }
-                if (win.tool === "text" && e.button === Qt.LeftButton) { win.textAt = { x: e.x, y: e.y, doc: JSON.parse(canvas.toDoc(e.x, e.y)) }; textInput.text = ""; textInput.forceActiveFocus(); }
+                if (win.tool === "text" && e.button === Qt.LeftButton) {
+                    // A click on a type layer edits its text; elsewhere it starts a new one
+                    const doc = JSON.parse(canvas.toDoc(e.x, e.y));
+                    let hit = null, existing = "";
+                    try {
+                        hit = JSON.parse(canvas.ask("type.hitTest", JSON.stringify({ x: Math.round(doc[0]), y: Math.round(doc[1]) })));
+                        if (hit) existing = JSON.parse(canvas.ask("type.info", JSON.stringify({ layer: hit.layer }))).text ?? "";
+                    } catch (err) { hit = null; }
+                    win.textAt = { x: e.x, y: e.y, doc: doc, layer: hit ? hit.layer : null };
+                    textInput.text = existing;
+                    textInput.forceActiveFocus();
+                }
                 if (win.tool === "move" && e.button === Qt.LeftButton) {
                     const p = JSON.parse(canvas.toDoc(e.x, e.y));
                     if (win.autoSelect) canvas.run("layer.pickAt", JSON.stringify({ x: Math.round(p[0]), y: Math.round(p[1]), target: win.autoTarget, select: true }));
@@ -1590,7 +1601,9 @@ ApplicationWindow {
             placeholder: Fili.tr("Type, then press Enter")
             Keys.onEscapePressed: win.textAt = null
             onAccepted: {
-                if (text !== "" && win.textAt)
+                if (text !== "" && win.textAt && win.textAt.layer !== null)
+                    canvas.run("type.edit", JSON.stringify({ layer: win.textAt.layer, text: text }));
+                else if (text !== "" && win.textAt)
                     canvas.run("type.create", JSON.stringify({ x: Math.round(win.textAt.doc[0]), y: Math.round(win.textAt.doc[1]), text: text, size: win.textSize, color: win.brushColor, font: win.textFont, weight: win.textBold ? 700 : 400, italic: win.textItalic }));
                 win.textAt = null;
             }

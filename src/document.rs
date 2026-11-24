@@ -284,6 +284,14 @@ pub fn probe(file: &str) -> i32 {
             Err(e) => println!("{kind}: {e}"),
         }
     }
+    let typed = doc.query("type.create", json!({"x": 20, "y": 40, "text": "Hello", "size": 20}));
+    let edited = typed.as_ref().ok().and_then(|v| v["layer"].as_u64()).map(|l| {
+        let hit = doc.query("type.hitTest", json!({"x": 22, "y": 36}));
+        let info = doc.query("type.info", json!({"layer": l}));
+        let edit = doc.query("type.edit", json!({"layer": l, "text": "Edited"}));
+        (hit.map(|h| h["layer"].clone()), info.map(|i| i["text"].clone()), edit.map(|_| ()))
+    });
+    println!("type edit: {edited:?}");
     let shape = doc.query("shape.create", json!({"kind": "path", "fill": "#336699", "path": {"subpaths": [{"closed": true, "knots": [[10, 10], [80, 20], [40, 70]]}]}}));
     println!("shape.info: {:?}", shape.and_then(|_| doc.query("shape.info", json!({}))).map(|v| v.to_string().chars().take(900).collect::<String>()));
     let moved = doc.query("path.moveAnchors", json!({"name": "layer", "layer": doc.detail()["layers"][0]["id"], "anchors": [[0, 1]], "move": [5, 5]}));
