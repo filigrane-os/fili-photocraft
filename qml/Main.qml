@@ -86,11 +86,17 @@ ApplicationWindow {
         return out;
     }
     // Pen: clicks add the corners of a path, Enter or a double click (or a click on the first point) closes it into a shape layer
+    // Fill and outline of a new shape: the foreground colour fills it, the background colour outlines it
+    function shapeParams(p) {
+        p.fill = shapeFill ? brushColor : null;
+        p.stroke = shapeStroke ? { color: bgColor, width: shapeStrokeWidth } : null;
+        return p;
+    }
     function finishPen() {
         const pts = penPoints.filter((p, i, a) => i === 0 || Math.hypot(p[0] - a[i - 1][0], p[1] - a[i - 1][1]) > 1);
         penPoints = [];
         if (pts.length >= 3)
-            canvas.run("shape.create", JSON.stringify({ kind: "path", fill: brushColor, path: { subpaths: [{ closed: true, knots: pts }] } }));
+            canvas.run("shape.create", JSON.stringify(win.shapeParams({ kind: "path", path: { subpaths: [{ closed: true, knots: pts }] } })));
     }
     function selectTool(id) {
         const i = toolGroups.findIndex(g => g.indexOf(id) >= 0);
@@ -118,10 +124,15 @@ ApplicationWindow {
     property var stroke: []
     property real brushSize: 24
     property real brushHardness: 0.8
+    property real brushOpacity: 1
+    property real brushFlow: 1
+    property bool shapeFill: true
+    property bool shapeStroke: false
+    property int shapeStrokeWidth: 4
     property string brushColor: "#000000"
     function strokeParams() {
         if (tool === "quick") return JSON.stringify({ points: stroke, size: brushSize, mode: "add", sampleAllLayers: true });
-        const p = { layer: activeLayer ? activeLayer.id : 0, points: stroke, size: brushSize, hardness: brushHardness };
+        const p = { layer: activeLayer ? activeLayer.id : 0, points: stroke, size: brushSize, hardness: brushHardness, opacity: Math.max(1, Math.round(brushOpacity * 100)), flow: Math.max(1, Math.round(brushFlow * 100)) };
         if (tool === "eraser") p.erase = true; else if (usesColor) p.color = brushColor;
         if (tool === "stamp" && stampSource && stroke.length > 0) {
             if (stampOffset === null) stampOffset = [stampSource[0] - stroke[0][0], stampSource[1] - stroke[0][1]];
@@ -588,7 +599,11 @@ ApplicationWindow {
         Row {
             visible: win.shapeTool || win.tool === "pen"
             spacing: FiliTheme.space3
-            Text { anchors.verticalCenter: parent.verticalCenter; text: Fili.tr("Drag to draw a shape in the colour of") ; font.family: FiliTheme.font; font.pixelSize: FiliTheme.size; color: FiliTheme.textSecondary }
+            FiliCheckBox { anchors.verticalCenter: parent.verticalCenter; label: Fili.tr("Fill"); checked: win.shapeFill; onToggled: win.shapeFill = !win.shapeFill }
+            FiliCheckBox { anchors.verticalCenter: parent.verticalCenter; label: Fili.tr("Stroke"); checked: win.shapeStroke; onToggled: win.shapeStroke = !win.shapeStroke }
+            FiliSlider { width: 80; anchors.verticalCenter: parent.verticalCenter; value: (win.shapeStrokeWidth - 1) / 49; onMoved: v => win.shapeStrokeWidth = Math.round(1 + v * 49) }
+            Text { anchors.verticalCenter: parent.verticalCenter; text: win.shapeStrokeWidth + " px"; font.family: FiliTheme.font; font.pixelSize: FiliTheme.size; color: FiliTheme.textSecondary }
+            Text { anchors.verticalCenter: parent.verticalCenter; text: Fili.tr("Colour of the fill"); font.family: FiliTheme.font; font.pixelSize: FiliTheme.size; color: FiliTheme.textSecondary }
             Repeater {
                 model: win.shapeTool || win.tool === "pen" ? ["#000000", "#ffffff", "#e0605a", "#5cc06a", "#5a8fe0", "#e8c547"] : []
                 Rectangle {
@@ -620,6 +635,10 @@ ApplicationWindow {
             FiliSlider { width: 120; anchors.verticalCenter: parent.verticalCenter; value: (win.brushSize - 1) / 199; onMoved: v => win.brushSize = 1 + v * 199 }
             Text { anchors.verticalCenter: parent.verticalCenter; text: Fili.tr("Hardness") + " " + Math.round(win.brushHardness * 100) + " %"; font.family: FiliTheme.font; font.pixelSize: FiliTheme.size; color: FiliTheme.text }
             FiliSlider { width: 120; anchors.verticalCenter: parent.verticalCenter; value: win.brushHardness; onMoved: v => win.brushHardness = v }
+            Text { visible: win.tool !== "quick"; anchors.verticalCenter: parent.verticalCenter; text: Fili.tr("Opacity") + " " + Math.round(win.brushOpacity * 100) + " %"; font.family: FiliTheme.font; font.pixelSize: FiliTheme.size; color: FiliTheme.text }
+            FiliSlider { visible: win.tool !== "quick"; width: 100; anchors.verticalCenter: parent.verticalCenter; value: win.brushOpacity; onMoved: v => win.brushOpacity = v }
+            Text { visible: win.tool !== "quick"; anchors.verticalCenter: parent.verticalCenter; text: Fili.tr("Flow") + " " + Math.round(win.brushFlow * 100) + " %"; font.family: FiliTheme.font; font.pixelSize: FiliTheme.size; color: FiliTheme.text }
+            FiliSlider { visible: win.tool !== "quick"; width: 100; anchors.verticalCenter: parent.verticalCenter; value: win.brushFlow; onMoved: v => win.brushFlow = v }
             Repeater {
                 model: win.usesColor ? ["#000000", "#ffffff", "#e0605a", "#5cc06a", "#5a8fe0", "#e8c547"] : []
                 Rectangle {
@@ -1357,7 +1376,7 @@ ApplicationWindow {
                     const r = { x: Math.round(Math.min(a[0], b[0])), y: Math.round(Math.min(a[1], b[1])), w: Math.round(Math.abs(b[0] - a[0])), h: Math.round(Math.abs(b[1] - a[1])) };
                     if (r.w > 0 && r.h > 0) {
                         if (win.shapeKinds[win.tool] !== undefined) {
-                            canvas.run("shape.create", JSON.stringify({ kind: win.shapeKinds[win.tool], rect: [r.x, r.y, r.w, r.h], fill: win.brushColor }));
+                            canvas.run("shape.create", JSON.stringify(win.shapeParams({ kind: win.shapeKinds[win.tool], rect: [r.x, r.y, r.w, r.h] })));
                         } else {
                             const params = { x: r.x, y: r.y, width: r.w, height: r.h };
                             if (win.tool === "ellipse") params.ellipse = true;
@@ -1387,7 +1406,7 @@ ApplicationWindow {
                     const b = JSON.parse(canvas.toDoc(z.x, z.y));
                     win.lasso = [];
                     if (a[0] !== b[0] || a[1] !== b[1]) {
-                        if (win.tool === "line") canvas.run("shape.create", JSON.stringify({ kind: "line", from: a, to: b, weight: Math.max(1, Math.round(win.brushSize / 4)), stroke: { color: win.brushColor, width: Math.max(1, Math.round(win.brushSize / 4)) }, fill: null }));
+                        if (win.tool === "line") canvas.run("shape.create", JSON.stringify({ kind: "line", from: a, to: b, weight: win.shapeStrokeWidth, stroke: { color: win.brushColor, width: win.shapeStrokeWidth }, fill: null }));
                         else canvas.run("paint.gradient", JSON.stringify({ from: a, to: b, stops: win.currentGradient.stops.map(s => [s[0], win.stopColor(s[1])]), transparency: win.currentGradient.transparency }));
                     }
                 } else if (win.lasso.length > 0) {

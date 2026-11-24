@@ -240,7 +240,7 @@ pub fn probe(file: &str) -> i32 {
     let id = doc.detail()["layers"][0]["id"].clone();
     let pts = json!([[20, 20], [60, 40], [90, 30]]);
     let tools = [
-        ("paint.stroke", json!({"layer": id, "points": pts, "size": 12, "hardness": 0.8, "color": "#ff0000"})),
+        ("paint.stroke", json!({"layer": id, "points": pts, "size": 12, "hardness": 0.8, "opacity": 60, "flow": 50, "color": "#ff0000"})),
         ("paint.pencil", json!({"layer": id, "points": pts, "size": 4, "hardness": 0.8, "color": "#00ff00"})),
         ("paint.blur", json!({"layer": id, "points": pts, "size": 20, "hardness": 0.8})),
         ("paint.sharpen", json!({"layer": id, "points": pts, "size": 20, "hardness": 0.8})),
@@ -256,6 +256,7 @@ pub fn probe(file: &str) -> i32 {
         ("paint.gradient", json!({"from": [0, 0], "to": [100, 100], "stops": [[0, "#ff0000"], [1, "#ffffff"]], "transparency": [[0, 100], [1, 0]]})),
         ("pattern.presets.select", json!({"pattern": "Checkerboard"})),
         ("paint.bucket", json!({"x": 20, "y": 20, "tolerance": 32, "contents": "pattern", "pattern": "Checkerboard"})),
+        ("shape.create", json!({"kind": "ellipse", "rect": [5, 5, 60, 40], "fill": "#e0605a", "stroke": {"color": "#ffffff", "width": 4}})),
         ("shape.create", json!({"kind": "star", "rect": [10, 10, 80, 80], "fill": "#e0605a"})),
         ("shape.create", json!({"kind": "path", "fill": "#336699", "path": {"subpaths": [{"closed": true, "knots": [[10, 10], [80, 20], [40, 70]]}]}})),
         ("shape.create", json!({"kind": "line", "from": [0, 0], "to": [90, 90], "weight": 4, "stroke": {"color": "#000000", "width": 4}, "fill": null})),
