@@ -6,3 +6,4 @@ PhotoCraft edits images with layers and adjustment layers (the PhotoCraft engine
 - The image on screen is a copy in memory until it is saved: undo is always available (`ctl action undo`), so say what you changed and that Undo reverts it.
 - Never overwrite an original file: work on a copy, or on the open document without saving.
 - Several images or a folder in one go: use `photocraft-cli batch` or `photocraft-cli run` (headless), not the window.
+- Menus are actions too: `file-new`, `save-copy`, `edit-copy`/`edit-paste`, `image-size`, `filter-gaussian-blur`, `layer-style-drop-shadow`, `select-subject`, `panel-history`… (`ctl actions` lists all). Those with a dialog open it; the engine commands behind them are in `PhotoCraft engine` terms (`photocraft-cli` for batches).

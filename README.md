@@ -5,9 +5,9 @@ engine. The layout is PhotoCraft's (options bar, tools, document tab, panels, st
 
 ## Tools and panels
 
-Move, marquees (rectangle, ellipse), lasso, magic wand, crop, eyedropper, brush, pencil, clone stamp, history brush, spot healing,
-gradient, paint bucket, pen, text, shapes, eraser, blur, sharpen, smudge, dodge, burn, sponge, hand, zoom (a key or a click on the
-tool in hand goes to the next of its group). Panels: Properties (opacity, blend mode, locks, adjustment sliders, curves with histogram),
+Move (with Auto-Select), marquees (rectangle, ellipse), lasso, magic wand, quick and object selection, crop, eyedropper, brush, pencil, clone stamp, history brush, spot healing, remove,
+gradient, paint bucket, pen, direct selection, text, shapes, eraser, blur, sharpen, smudge, dodge, burn, sponge, hand, zoom (a key or a click on the
+tool in hand goes to the next of its group). Menus: File (New, Open, Save a Copy), Edit (clipboard, fills, stroke, Content-Aware Fill, Free Transform), Image (mode, size, canvas, rotation, crop, trim, auto tone), Layer (styles, masks, clipping, arrange, merge), Select (subject, sky, color range, modify, refine edge), Filter (blur, sharpen, noise, stylize, other), Window (every panel). Panels: Properties (opacity, blend mode, locks, adjustment sliders, curves with histogram),
 Adjustments, Color, Navigator, Layers (thumbnails), Channels, Paths, History, and a Debug log (Ctrl+Shift+L).
 
 ## Development
