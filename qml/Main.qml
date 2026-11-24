@@ -191,9 +191,61 @@ ApplicationWindow {
     function hideTip(item) { tipText = ""; }
     // The blend modes of the layer menu, in Photoshop order (the engine reads the labels)
     readonly property var blendModes: ["Normal", "Dissolve", "Darken", "Multiply", "Color Burn", "Linear Burn", "Darker Color", "Lighten", "Screen", "Color Dodge", "Linear Dodge (Add)", "Lighter Color", "Overlay", "Soft Light", "Hard Light", "Vivid Light", "Linear Light", "Pin Light", "Hard Mix", "Difference", "Exclusion", "Subtract", "Divide", "Hue", "Saturation", "Color", "Luminosity"].map(n => ({ label: Fili.tr(n), value: n }))
+    // BEGIN generated dialogs
+    readonly property var dialogSpecs: {"file-new": {"cmd": "file.new", "title": "New Document", "fields": [{"key": "width", "label": "Width (px)", "value": 1920}, {"key": "height", "label": "Height (px)", "value": 1080}], "extra": {}}, "edit-stroke": {"cmd": "edit.stroke", "title": "Stroke the selection", "fields": [{"key": "width", "label": "Width (px)", "value": 3}], "extra": {"color": "$fg"}}, "image-size": {"cmd": "image.imageSize", "title": "Image Size", "fields": [{"key": "width", "label": "Width (px)", "value": "@w"}, {"key": "height", "label": "Height (px)", "value": "@h"}], "extra": {}}, "image-canvas-size": {"cmd": "image.canvasSize", "title": "Canvas Size", "fields": [{"key": "width", "label": "Width (px)", "value": "@w"}, {"key": "height", "label": "Height (px)", "value": "@h"}], "extra": {}}, "filter-gaussian-blur": {"cmd": "filter.blur.gaussianBlur", "title": "Gaussian Blur", "fields": [{"key": "radius", "label": "Radius (px)", "value": 5}], "extra": {}}, "filter-box-blur": {"cmd": "filter.blur.boxBlur", "title": "Box Blur", "fields": [{"key": "radius", "label": "Radius (px)", "value": 5}], "extra": {}}, "filter-motion-blur": {"cmd": "filter.blur.motionBlur", "title": "Motion Blur", "fields": [{"key": "angle", "label": "Angle (°)", "value": 0}, {"key": "distance", "label": "Distance (px)", "value": 20}], "extra": {}}, "filter-surface-blur": {"cmd": "filter.blur.surfaceBlur", "title": "Surface Blur", "fields": [{"key": "radius", "label": "Radius (px)", "value": 5}, {"key": "threshold", "label": "Threshold", "value": 15}], "extra": {}}, "filter-unsharp-mask": {"cmd": "filter.sharpen.unsharpMask", "title": "Unsharp Mask", "fields": [{"key": "amount", "label": "Amount (%)", "value": 80}, {"key": "radius", "label": "Radius (px)", "value": 1}, {"key": "threshold", "label": "Threshold", "value": 0}], "extra": {}}, "filter-smart-sharpen": {"cmd": "filter.sharpen.smartSharpen", "title": "Smart Sharpen", "fields": [{"key": "amount", "label": "Amount (%)", "value": 100}, {"key": "radius", "label": "Radius (px)", "value": 1}, {"key": "reduceNoise", "label": "Reduce noise (%)", "value": 10}], "extra": {}}, "filter-add-noise": {"cmd": "filter.noise.addNoise", "title": "Add Noise", "fields": [{"key": "amount", "label": "Amount (%)", "value": 12.5}], "extra": {}}, "filter-median": {"cmd": "filter.noise.median", "title": "Median", "fields": [{"key": "radius", "label": "Radius (px)", "value": 2}], "extra": {}}, "filter-emboss": {"cmd": "filter.stylize.emboss", "title": "Emboss", "fields": [{"key": "angle", "label": "Angle (°)", "value": 135}, {"key": "height", "label": "Height (px)", "value": 3}, {"key": "amount", "label": "Amount (%)", "value": 100}], "extra": {}}, "filter-high-pass": {"cmd": "filter.other.highPass", "title": "High Pass", "fields": [{"key": "radius", "label": "Radius (px)", "value": 10}], "extra": {}}, "filter-offset": {"cmd": "filter.other.offset", "title": "Offset", "fields": [{"key": "horizontal", "label": "Horizontal (px)", "value": 0}, {"key": "vertical", "label": "Vertical (px)", "value": 0}], "extra": {"undefinedAreas": "wrap"}}}
+    // END generated dialogs
+    function runCommand(cmd, params) { canvas.run(cmd, JSON.stringify(params)); }
+    // A command with a few numbers to ask for: the dialog is filled from the spec, "@w" and "@h" are the size of the image
+    property var paramSpec: null
+    property var paramValues: []
+    function openParams(action) {
+        const spec = dialogSpecs[action];
+        paramSpec = spec;
+        paramValues = spec.fields.map(f => String(f.value === "@w" ? docSize.w : f.value === "@h" ? docSize.h : f.value));
+        paramDialog.open();
+    }
+    function applyParams() {
+        const p = Object.assign({}, paramSpec.extra);
+        paramSpec.fields.forEach((f, i) => { const v = Number(paramValues[i].replace(",", ".")); if (!isNaN(v)) p[f.key] = v; });
+        if (p.color === "$fg") p.color = brushColor;
+        runCommand(paramSpec.cmd, p);
+    }
     function setLayer(id, props) { canvas.run("layer.setProps", JSON.stringify(Object.assign({ layer: id }, props))); }
     function zoomStep(factor) { canvas.zoomAt(factor, canvas.width / 2, canvas.height / 2); }
 
+    FileDialog {
+        id: saveDialog
+        title: Fili.tr("Save a Copy")
+        fileMode: FileDialog.SaveFile
+        nameFilters: ["PNG (*.png)", "JPEG (*.jpg *.jpeg)", "WebP (*.webp)", "TIFF (*.tif *.tiff)", "PhotoCraft/Photoshop (*.psd)"]
+        onAccepted: { let p = selectedFile.toString().replace("file://", ""); if (!/\.[A-Za-z0-9]+$/.test(p)) p += ".png"; win.runCommand("file.saveACopy", { path: decodeURIComponent(p) }); }
+    }
+    FiliDialog {
+        id: paramDialog
+        title: win.paramSpec ? Fili.tr(win.paramSpec.title) : ""
+        confirmLabel: Fili.tr("OK")
+        cardWidth: 340
+        onAccepted: win.applyParams()
+        Column {
+            spacing: FiliTheme.space2
+            width: parent ? parent.width : 300
+            Repeater {
+                model: win.paramSpec ? win.paramSpec.fields : []
+                Row {
+                    required property var modelData
+                    required property int index
+                    spacing: FiliTheme.space3
+                    Text { width: 130; anchors.verticalCenter: parent.verticalCenter; text: Fili.tr(modelData.label); font.family: FiliTheme.font; font.pixelSize: FiliTheme.size; color: FiliTheme.text; elide: Text.ElideRight }
+                    FiliTextField {
+                        width: 120
+                        text: win.paramValues[index] ?? ""
+                        onTextChanged: { const v = win.paramValues.slice(); v[index] = text; win.paramValues = v; }
+                        onAccepted: paramDialog.accept()
+                    }
+                }
+            }
+        }
+    }
     FileDialog {
         id: openDialog
         title: Fili.tr("Open Image")
@@ -247,6 +299,70 @@ ApplicationWindow {
         "tool-pen": { on: () => true, run: () => win.selectTool("pen") },
         "debug": { on: () => true, run: () => debug.open = !debug.open },
         "tool-direct": { on: () => true, run: () => win.selectTool("direct") },
+        // BEGIN generated commands (scripts of the menus: File, Edit, Image, Layer, Filter)
+        "save-copy": { on: () => canvas.loaded, run: () => saveDialog.open() },
+        "edit-cut": { on: () => canvas.loaded, run: () => win.runCommand("edit.cut", {}) },
+        "edit-copy": { on: () => canvas.loaded, run: () => win.runCommand("edit.copy", {}) },
+        "edit-copy-merged": { on: () => canvas.loaded, run: () => win.runCommand("edit.copyMerged", {}) },
+        "edit-paste": { on: () => canvas.loaded, run: () => win.runCommand("edit.paste", {}) },
+        "edit-paste-in-place": { on: () => canvas.loaded, run: () => win.runCommand("edit.pasteSpecial.pasteInPlace", {}) },
+        "edit-clear": { on: () => canvas.loaded, run: () => win.runCommand("edit.clear", {}) },
+        "edit-fill-foreground": { on: () => canvas.loaded, run: () => win.runCommand("edit.fill", { contents: "color", color: win.brushColor }) },
+        "edit-fill-background": { on: () => canvas.loaded, run: () => win.runCommand("edit.fill", { contents: "color", color: win.bgColor }) },
+        "image-rotate-cw": { on: () => canvas.loaded, run: () => win.runCommand("image.imageRotation.90cw", {}) },
+        "image-rotate-ccw": { on: () => canvas.loaded, run: () => win.runCommand("image.imageRotation.90ccw", {}) },
+        "image-rotate-half-turn": { on: () => canvas.loaded, run: () => win.runCommand("image.imageRotation.180", {}) },
+        "image-flip-horizontal": { on: () => canvas.loaded, run: () => win.runCommand("image.imageRotation.flipCanvasHorizontal", {}) },
+        "image-flip-vertical": { on: () => canvas.loaded, run: () => win.runCommand("image.imageRotation.flipCanvasVertical", {}) },
+        "image-crop-selection": { on: () => canvas.loaded, run: () => win.runCommand("image.crop", {}) },
+        "image-trim": { on: () => canvas.loaded, run: () => win.runCommand("image.trim", {}) },
+        "image-reveal-all": { on: () => canvas.loaded, run: () => win.runCommand("image.revealAll", {}) },
+        "image-auto-tone": { on: () => canvas.loaded, run: () => win.runCommand("image.autoTone", {}) },
+        "image-auto-contrast": { on: () => canvas.loaded, run: () => win.runCommand("image.autoContrast", {}) },
+        "image-auto-color": { on: () => canvas.loaded, run: () => win.runCommand("image.autoColor", {}) },
+        "image-mode-rgb": { on: () => canvas.loaded, run: () => win.runCommand("image.mode.rgb", {}) },
+        "image-mode-grayscale": { on: () => canvas.loaded, run: () => win.runCommand("image.mode.grayscale", {}) },
+        "image-mode-cmyk": { on: () => canvas.loaded, run: () => win.runCommand("image.mode.cmyk", {}) },
+        "image-mode-lab": { on: () => canvas.loaded, run: () => win.runCommand("image.mode.lab", {}) },
+        "image-bits-eight": { on: () => canvas.loaded, run: () => win.runCommand("image.mode.bits8", {}) },
+        "image-bits-sixteen": { on: () => canvas.loaded, run: () => win.runCommand("image.mode.bits16", {}) },
+        "layer-new": { on: () => canvas.loaded, run: () => win.runCommand("layer.new.layer", {}) },
+        "layer-duplicate": { on: () => canvas.loaded, run: () => win.runCommand("layer.duplicate", {}) },
+        "layer-delete": { on: () => canvas.loaded, run: () => win.runCommand("layer.delete", {}) },
+        "layer-group": { on: () => canvas.loaded, run: () => win.runCommand("layer.groupLayers", {}) },
+        "layer-merge-down": { on: () => canvas.loaded, run: () => win.runCommand("layer.mergeDown", {}) },
+        "layer-merge-visible": { on: () => canvas.loaded, run: () => win.runCommand("layer.mergeVisible", {}) },
+        "layer-flatten": { on: () => canvas.loaded, run: () => win.runCommand("layer.flattenImage", {}) },
+        "layer-bring-forward": { on: () => canvas.loaded, run: () => win.runCommand("layer.arrange.bringForward", {}) },
+        "layer-send-backward": { on: () => canvas.loaded, run: () => win.runCommand("layer.arrange.sendBackward", {}) },
+        "layer-bring-to-front": { on: () => canvas.loaded, run: () => win.runCommand("layer.arrange.bringToFront", {}) },
+        "layer-send-to-back": { on: () => canvas.loaded, run: () => win.runCommand("layer.arrange.sendToBack", {}) },
+        "layer-rasterize": { on: () => canvas.loaded, run: () => win.runCommand("layer.rasterize.layer", {}) },
+        "filter-blur": { on: () => canvas.loaded, run: () => win.runCommand("filter.blur.blur", {}) },
+        "filter-blur-more": { on: () => canvas.loaded, run: () => win.runCommand("filter.blur.blurMore", {}) },
+        "filter-sharpen": { on: () => canvas.loaded, run: () => win.runCommand("filter.sharpen.sharpen", {}) },
+        "filter-sharpen-more": { on: () => canvas.loaded, run: () => win.runCommand("filter.sharpen.sharpenMore", {}) },
+        "filter-sharpen-edges": { on: () => canvas.loaded, run: () => win.runCommand("filter.sharpen.sharpenEdges", {}) },
+        "filter-despeckle": { on: () => canvas.loaded, run: () => win.runCommand("filter.noise.despeckle", {}) },
+        "filter-find-edges": { on: () => canvas.loaded, run: () => win.runCommand("filter.stylize.findEdges", {}) },
+        "filter-solarize": { on: () => canvas.loaded, run: () => win.runCommand("filter.stylize.solarize", {}) },
+        "filter-oil-paint": { on: () => canvas.loaded, run: () => win.runCommand("filter.stylize.oilPaint", {}) },
+        "file-new": { on: () => true, run: () => win.openParams("file-new") },
+        "edit-stroke": { on: () => canvas.loaded, run: () => win.openParams("edit-stroke") },
+        "image-size": { on: () => canvas.loaded, run: () => win.openParams("image-size") },
+        "image-canvas-size": { on: () => canvas.loaded, run: () => win.openParams("image-canvas-size") },
+        "filter-gaussian-blur": { on: () => canvas.loaded, run: () => win.openParams("filter-gaussian-blur") },
+        "filter-box-blur": { on: () => canvas.loaded, run: () => win.openParams("filter-box-blur") },
+        "filter-motion-blur": { on: () => canvas.loaded, run: () => win.openParams("filter-motion-blur") },
+        "filter-surface-blur": { on: () => canvas.loaded, run: () => win.openParams("filter-surface-blur") },
+        "filter-unsharp-mask": { on: () => canvas.loaded, run: () => win.openParams("filter-unsharp-mask") },
+        "filter-smart-sharpen": { on: () => canvas.loaded, run: () => win.openParams("filter-smart-sharpen") },
+        "filter-add-noise": { on: () => canvas.loaded, run: () => win.openParams("filter-add-noise") },
+        "filter-median": { on: () => canvas.loaded, run: () => win.openParams("filter-median") },
+        "filter-emboss": { on: () => canvas.loaded, run: () => win.openParams("filter-emboss") },
+        "filter-high-pass": { on: () => canvas.loaded, run: () => win.openParams("filter-high-pass") },
+        "filter-offset": { on: () => canvas.loaded, run: () => win.openParams("filter-offset") },
+        // END generated commands
         "select-all": { on: () => canvas.loaded, run: () => { canvas.run("select.all", "{}")} },
         "select-inverse": { on: () => canvas.loaded, run: () => canvas.run("select.inverse", "{}") },
         "select-sky": { on: () => canvas.loaded, run: () => canvas.run("select.sky", "{}") },
@@ -336,6 +452,17 @@ ApplicationWindow {
     Shortcut { sequence: "A"; onActivated: win.keyTool("A") }
     Shortcut { sequence: "Ctrl+Shift+L"; onActivated: win.runAction("debug") }
     Shortcut { sequence: "Ctrl+Shift+I"; onActivated: win.runAction("select-inverse") }
+    // BEGIN generated shortcuts
+    Shortcut { sequence: "Ctrl+X"; onActivated: win.runAction("edit-cut") }
+    Shortcut { sequence: "Ctrl+C"; onActivated: win.runAction("edit-copy") }
+    Shortcut { sequence: "Ctrl+Shift+C"; onActivated: win.runAction("edit-copy-merged") }
+    Shortcut { sequence: "Ctrl+V"; onActivated: win.runAction("edit-paste") }
+    Shortcut { sequence: "Ctrl+Shift+V"; onActivated: win.runAction("edit-paste-in-place") }
+    Shortcut { sequence: "Ctrl+N"; onActivated: win.runAction("file-new") }
+    Shortcut { sequence: "Ctrl+Alt+I"; onActivated: win.runAction("image-size") }
+    Shortcut { sequence: "Ctrl+Alt+C"; onActivated: win.runAction("image-canvas-size") }
+    Shortcut { sequence: "Ctrl+Shift+S"; onActivated: win.runAction("save-copy") }
+    // END generated shortcuts
     Shortcut { sequence: "Ctrl+A"; onActivated: win.runAction("select-all") }
     Shortcut { sequence: "Ctrl+D"; onActivated: win.runAction("deselect") }
 

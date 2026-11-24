@@ -11,9 +11,19 @@
       "label": "File",
       "children": [
         {
+          "label": "New…",
+          "keys": "Ctrl+N",
+          "exec": "fili-photocraft ctl --pid %pid action file-new"
+        },
+        {
           "label": "Open…",
           "keys": "Ctrl+O",
           "exec": "fili-photocraft ctl --pid %pid action open"
+        },
+        {
+          "label": "Save a Copy…",
+          "keys": "Ctrl+Shift+S",
+          "exec": "fili-photocraft ctl --pid %pid action save-copy"
         },
         {
           "sep": true
@@ -37,36 +47,207 @@
           "label": "Redo",
           "keys": "Ctrl+Shift+Z",
           "exec": "fili-photocraft ctl --pid %pid action redo"
+        },
+        {
+          "sep": true
+        },
+        {
+          "label": "Cut",
+          "keys": "Ctrl+X",
+          "exec": "fili-photocraft ctl --pid %pid action edit-cut"
+        },
+        {
+          "label": "Copy",
+          "keys": "Ctrl+C",
+          "exec": "fili-photocraft ctl --pid %pid action edit-copy"
+        },
+        {
+          "label": "Copy Merged",
+          "keys": "Ctrl+Shift+C",
+          "exec": "fili-photocraft ctl --pid %pid action edit-copy-merged"
+        },
+        {
+          "label": "Paste",
+          "keys": "Ctrl+V",
+          "exec": "fili-photocraft ctl --pid %pid action edit-paste"
+        },
+        {
+          "label": "Paste in Place",
+          "keys": "Ctrl+Shift+V",
+          "exec": "fili-photocraft ctl --pid %pid action edit-paste-in-place"
+        },
+        {
+          "label": "Clear",
+          "exec": "fili-photocraft ctl --pid %pid action edit-clear"
+        },
+        {
+          "sep": true
+        },
+        {
+          "label": "Fill with Foreground Color",
+          "exec": "fili-photocraft ctl --pid %pid action edit-fill-foreground"
+        },
+        {
+          "label": "Fill with Background Color",
+          "exec": "fili-photocraft ctl --pid %pid action edit-fill-background"
+        },
+        {
+          "label": "Stroke…",
+          "exec": "fili-photocraft ctl --pid %pid action edit-stroke"
         }
       ]
     },
     {
-      "label": "Select",
+      "label": "Image",
       "children": [
         {
-          "label": "Select All",
-          "keys": "Ctrl+A",
-          "exec": "fili-photocraft ctl --pid %pid action select-all"
+          "label": "Mode",
+          "children": [
+            {
+              "label": "RGB Color",
+              "exec": "fili-photocraft ctl --pid %pid action image-mode-rgb"
+            },
+            {
+              "label": "Grayscale",
+              "exec": "fili-photocraft ctl --pid %pid action image-mode-grayscale"
+            },
+            {
+              "label": "CMYK Color",
+              "exec": "fili-photocraft ctl --pid %pid action image-mode-cmyk"
+            },
+            {
+              "label": "Lab Color",
+              "exec": "fili-photocraft ctl --pid %pid action image-mode-lab"
+            },
+            {
+              "sep": true
+            },
+            {
+              "label": "8 Bits/Channel",
+              "exec": "fili-photocraft ctl --pid %pid action image-bits-eight"
+            },
+            {
+              "label": "16 Bits/Channel",
+              "exec": "fili-photocraft ctl --pid %pid action image-bits-sixteen"
+            }
+          ]
         },
         {
-          "label": "Deselect",
-          "keys": "Ctrl+D",
-          "exec": "fili-photocraft ctl --pid %pid action deselect"
+          "sep": true
         },
         {
-          "label": "Inverse",
-          "keys": "Ctrl+Shift+I",
-          "exec": "fili-photocraft ctl --pid %pid action select-inverse"
+          "label": "Image Size…",
+          "keys": "Ctrl+Alt+I",
+          "exec": "fili-photocraft ctl --pid %pid action image-size"
         },
         {
-          "label": "Sky",
-          "exec": "fili-photocraft ctl --pid %pid action select-sky"
+          "label": "Canvas Size…",
+          "keys": "Ctrl+Alt+C",
+          "exec": "fili-photocraft ctl --pid %pid action image-canvas-size"
+        },
+        {
+          "label": "Image Rotation",
+          "children": [
+            {
+              "label": "Rotate 90° Clockwise",
+              "exec": "fili-photocraft ctl --pid %pid action image-rotate-cw"
+            },
+            {
+              "label": "Rotate 90° Counter Clockwise",
+              "exec": "fili-photocraft ctl --pid %pid action image-rotate-ccw"
+            },
+            {
+              "label": "Rotate 180°",
+              "exec": "fili-photocraft ctl --pid %pid action image-rotate-half-turn"
+            },
+            {
+              "sep": true
+            },
+            {
+              "label": "Flip Canvas Horizontal",
+              "exec": "fili-photocraft ctl --pid %pid action image-flip-horizontal"
+            },
+            {
+              "label": "Flip Canvas Vertical",
+              "exec": "fili-photocraft ctl --pid %pid action image-flip-vertical"
+            }
+          ]
+        },
+        {
+          "label": "Crop to Selection",
+          "exec": "fili-photocraft ctl --pid %pid action image-crop-selection"
+        },
+        {
+          "label": "Trim",
+          "exec": "fili-photocraft ctl --pid %pid action image-trim"
+        },
+        {
+          "label": "Reveal All",
+          "exec": "fili-photocraft ctl --pid %pid action image-reveal-all"
+        },
+        {
+          "sep": true
+        },
+        {
+          "label": "Auto Tone",
+          "exec": "fili-photocraft ctl --pid %pid action image-auto-tone"
+        },
+        {
+          "label": "Auto Contrast",
+          "exec": "fili-photocraft ctl --pid %pid action image-auto-contrast"
+        },
+        {
+          "label": "Auto Color",
+          "exec": "fili-photocraft ctl --pid %pid action image-auto-color"
         }
       ]
     },
     {
       "label": "Layer",
       "children": [
+        {
+          "label": "New Layer",
+          "exec": "fili-photocraft ctl --pid %pid action layer-new"
+        },
+        {
+          "label": "Duplicate Layer",
+          "exec": "fili-photocraft ctl --pid %pid action layer-duplicate"
+        },
+        {
+          "label": "Delete Layer",
+          "exec": "fili-photocraft ctl --pid %pid action layer-delete"
+        },
+        {
+          "label": "Group Layers",
+          "exec": "fili-photocraft ctl --pid %pid action layer-group"
+        },
+        {
+          "sep": true
+        },
+        {
+          "label": "Arrange",
+          "children": [
+            {
+              "label": "Bring to Front",
+              "exec": "fili-photocraft ctl --pid %pid action layer-bring-to-front"
+            },
+            {
+              "label": "Bring Forward",
+              "exec": "fili-photocraft ctl --pid %pid action layer-bring-forward"
+            },
+            {
+              "label": "Send Backward",
+              "exec": "fili-photocraft ctl --pid %pid action layer-send-backward"
+            },
+            {
+              "label": "Send to Back",
+              "exec": "fili-photocraft ctl --pid %pid action layer-send-to-back"
+            }
+          ]
+        },
+        {
+          "sep": true
+        },
         {
           "label": "Show or Hide Layer",
           "exec": "fili-photocraft ctl --pid %pid action toggle-layer"
@@ -121,6 +302,165 @@
         {
           "label": "New Invert Adjustment",
           "exec": "fili-photocraft ctl --pid %pid action adjust-invert"
+        },
+        {
+          "sep": true
+        },
+        {
+          "label": "Rasterize Layer",
+          "exec": "fili-photocraft ctl --pid %pid action layer-rasterize"
+        },
+        {
+          "label": "Merge Down",
+          "exec": "fili-photocraft ctl --pid %pid action layer-merge-down"
+        },
+        {
+          "label": "Merge Visible",
+          "exec": "fili-photocraft ctl --pid %pid action layer-merge-visible"
+        },
+        {
+          "label": "Flatten Image",
+          "exec": "fili-photocraft ctl --pid %pid action layer-flatten"
+        }
+      ]
+    },
+    {
+      "label": "Select",
+      "children": [
+        {
+          "label": "Select All",
+          "keys": "Ctrl+A",
+          "exec": "fili-photocraft ctl --pid %pid action select-all"
+        },
+        {
+          "label": "Deselect",
+          "keys": "Ctrl+D",
+          "exec": "fili-photocraft ctl --pid %pid action deselect"
+        },
+        {
+          "label": "Inverse",
+          "keys": "Ctrl+Shift+I",
+          "exec": "fili-photocraft ctl --pid %pid action select-inverse"
+        },
+        {
+          "label": "Sky",
+          "exec": "fili-photocraft ctl --pid %pid action select-sky"
+        }
+      ]
+    },
+    {
+      "label": "Filter",
+      "children": [
+        {
+          "label": "Blur",
+          "children": [
+            {
+              "label": "Blur",
+              "exec": "fili-photocraft ctl --pid %pid action filter-blur"
+            },
+            {
+              "label": "Blur More",
+              "exec": "fili-photocraft ctl --pid %pid action filter-blur-more"
+            },
+            {
+              "sep": true
+            },
+            {
+              "label": "Gaussian Blur…",
+              "exec": "fili-photocraft ctl --pid %pid action filter-gaussian-blur"
+            },
+            {
+              "label": "Box Blur…",
+              "exec": "fili-photocraft ctl --pid %pid action filter-box-blur"
+            },
+            {
+              "label": "Motion Blur…",
+              "exec": "fili-photocraft ctl --pid %pid action filter-motion-blur"
+            },
+            {
+              "label": "Surface Blur…",
+              "exec": "fili-photocraft ctl --pid %pid action filter-surface-blur"
+            }
+          ]
+        },
+        {
+          "label": "Sharpen",
+          "children": [
+            {
+              "label": "Sharpen",
+              "exec": "fili-photocraft ctl --pid %pid action filter-sharpen"
+            },
+            {
+              "label": "Sharpen More",
+              "exec": "fili-photocraft ctl --pid %pid action filter-sharpen-more"
+            },
+            {
+              "label": "Sharpen Edges",
+              "exec": "fili-photocraft ctl --pid %pid action filter-sharpen-edges"
+            },
+            {
+              "sep": true
+            },
+            {
+              "label": "Unsharp Mask…",
+              "exec": "fili-photocraft ctl --pid %pid action filter-unsharp-mask"
+            },
+            {
+              "label": "Smart Sharpen…",
+              "exec": "fili-photocraft ctl --pid %pid action filter-smart-sharpen"
+            }
+          ]
+        },
+        {
+          "label": "Noise",
+          "children": [
+            {
+              "label": "Add Noise…",
+              "exec": "fili-photocraft ctl --pid %pid action filter-add-noise"
+            },
+            {
+              "label": "Median…",
+              "exec": "fili-photocraft ctl --pid %pid action filter-median"
+            },
+            {
+              "label": "Despeckle",
+              "exec": "fili-photocraft ctl --pid %pid action filter-despeckle"
+            }
+          ]
+        },
+        {
+          "label": "Stylize",
+          "children": [
+            {
+              "label": "Emboss…",
+              "exec": "fili-photocraft ctl --pid %pid action filter-emboss"
+            },
+            {
+              "label": "Find Edges",
+              "exec": "fili-photocraft ctl --pid %pid action filter-find-edges"
+            },
+            {
+              "label": "Solarize",
+              "exec": "fili-photocraft ctl --pid %pid action filter-solarize"
+            },
+            {
+              "label": "Oil Paint",
+              "exec": "fili-photocraft ctl --pid %pid action filter-oil-paint"
+            }
+          ]
+        },
+        {
+          "label": "Other",
+          "children": [
+            {
+              "label": "High Pass…",
+              "exec": "fili-photocraft ctl --pid %pid action filter-high-pass"
+            },
+            {
+              "label": "Offset…",
+              "exec": "fili-photocraft ctl --pid %pid action filter-offset"
+            }
+          ]
         }
       ]
     },

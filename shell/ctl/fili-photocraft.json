@@ -44,6 +44,264 @@
       "keys": "Ctrl+Shift+Z"
     },
     {
+      "name": "save-copy",
+      "label": "Save a Copy…",
+      "keys": "Ctrl+Shift+S",
+      "args": "[PATH]"
+    },
+    {
+      "name": "edit-cut",
+      "label": "Cut",
+      "keys": "Ctrl+X"
+    },
+    {
+      "name": "edit-copy",
+      "label": "Copy",
+      "keys": "Ctrl+C"
+    },
+    {
+      "name": "edit-copy-merged",
+      "label": "Copy Merged",
+      "keys": "Ctrl+Shift+C"
+    },
+    {
+      "name": "edit-paste",
+      "label": "Paste",
+      "keys": "Ctrl+V"
+    },
+    {
+      "name": "edit-paste-in-place",
+      "label": "Paste in Place",
+      "keys": "Ctrl+Shift+V"
+    },
+    {
+      "name": "edit-clear",
+      "label": "Clear"
+    },
+    {
+      "name": "edit-fill-foreground",
+      "label": "Fill with Foreground Color"
+    },
+    {
+      "name": "edit-fill-background",
+      "label": "Fill with Background Color"
+    },
+    {
+      "name": "image-rotate-cw",
+      "label": "Rotate 90° Clockwise"
+    },
+    {
+      "name": "image-rotate-ccw",
+      "label": "Rotate 90° Counter Clockwise"
+    },
+    {
+      "name": "image-rotate-half-turn",
+      "label": "Rotate 180°"
+    },
+    {
+      "name": "image-flip-horizontal",
+      "label": "Flip Canvas Horizontal"
+    },
+    {
+      "name": "image-flip-vertical",
+      "label": "Flip Canvas Vertical"
+    },
+    {
+      "name": "image-crop-selection",
+      "label": "Crop to Selection"
+    },
+    {
+      "name": "image-trim",
+      "label": "Trim"
+    },
+    {
+      "name": "image-reveal-all",
+      "label": "Reveal All"
+    },
+    {
+      "name": "image-auto-tone",
+      "label": "Auto Tone"
+    },
+    {
+      "name": "image-auto-contrast",
+      "label": "Auto Contrast"
+    },
+    {
+      "name": "image-auto-color",
+      "label": "Auto Color"
+    },
+    {
+      "name": "image-mode-rgb",
+      "label": "RGB Color"
+    },
+    {
+      "name": "image-mode-grayscale",
+      "label": "Grayscale"
+    },
+    {
+      "name": "image-mode-cmyk",
+      "label": "CMYK Color"
+    },
+    {
+      "name": "image-mode-lab",
+      "label": "Lab Color"
+    },
+    {
+      "name": "image-bits-eight",
+      "label": "8 Bits/Channel"
+    },
+    {
+      "name": "image-bits-sixteen",
+      "label": "16 Bits/Channel"
+    },
+    {
+      "name": "layer-new",
+      "label": "New Layer"
+    },
+    {
+      "name": "layer-duplicate",
+      "label": "Duplicate Layer"
+    },
+    {
+      "name": "layer-delete",
+      "label": "Delete Layer"
+    },
+    {
+      "name": "layer-group",
+      "label": "Group Layers"
+    },
+    {
+      "name": "layer-merge-down",
+      "label": "Merge Down"
+    },
+    {
+      "name": "layer-merge-visible",
+      "label": "Merge Visible"
+    },
+    {
+      "name": "layer-flatten",
+      "label": "Flatten Image"
+    },
+    {
+      "name": "layer-bring-forward",
+      "label": "Bring Forward"
+    },
+    {
+      "name": "layer-send-backward",
+      "label": "Send Backward"
+    },
+    {
+      "name": "layer-bring-to-front",
+      "label": "Bring to Front"
+    },
+    {
+      "name": "layer-send-to-back",
+      "label": "Send to Back"
+    },
+    {
+      "name": "layer-rasterize",
+      "label": "Rasterize Layer"
+    },
+    {
+      "name": "filter-blur",
+      "label": "Blur"
+    },
+    {
+      "name": "filter-blur-more",
+      "label": "Blur More"
+    },
+    {
+      "name": "filter-sharpen",
+      "label": "Sharpen"
+    },
+    {
+      "name": "filter-sharpen-more",
+      "label": "Sharpen More"
+    },
+    {
+      "name": "filter-sharpen-edges",
+      "label": "Sharpen Edges"
+    },
+    {
+      "name": "filter-despeckle",
+      "label": "Despeckle"
+    },
+    {
+      "name": "filter-find-edges",
+      "label": "Find Edges"
+    },
+    {
+      "name": "filter-solarize",
+      "label": "Solarize"
+    },
+    {
+      "name": "filter-oil-paint",
+      "label": "Oil Paint"
+    },
+    {
+      "name": "file-new",
+      "label": "New",
+      "keys": "Ctrl+N"
+    },
+    {
+      "name": "edit-stroke",
+      "label": "Stroke"
+    },
+    {
+      "name": "image-size",
+      "label": "Image Size",
+      "keys": "Ctrl+Alt+I"
+    },
+    {
+      "name": "image-canvas-size",
+      "label": "Canvas Size",
+      "keys": "Ctrl+Alt+C"
+    },
+    {
+      "name": "filter-gaussian-blur",
+      "label": "Gaussian Blur"
+    },
+    {
+      "name": "filter-box-blur",
+      "label": "Box Blur"
+    },
+    {
+      "name": "filter-motion-blur",
+      "label": "Motion Blur"
+    },
+    {
+      "name": "filter-surface-blur",
+      "label": "Surface Blur"
+    },
+    {
+      "name": "filter-unsharp-mask",
+      "label": "Unsharp Mask"
+    },
+    {
+      "name": "filter-smart-sharpen",
+      "label": "Smart Sharpen"
+    },
+    {
+      "name": "filter-add-noise",
+      "label": "Add Noise"
+    },
+    {
+      "name": "filter-median",
+      "label": "Median"
+    },
+    {
+      "name": "filter-emboss",
+      "label": "Emboss"
+    },
+    {
+      "name": "filter-high-pass",
+      "label": "High Pass"
+    },
+    {
+      "name": "filter-offset",
+      "label": "Offset"
+    },
+    {
       "name": "tool-move",
       "label": "Move",
       "keys": "V"

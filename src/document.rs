@@ -271,6 +271,9 @@ pub fn probe(file: &str) -> i32 {
         }
     }
     println!("tool commands accepted: {tools_ok}");
+    // The commands of the menus (File, Edit, Image, Layer, Filter) with the parameters the window sends
+    let menu_ok = probe_menu(file);
+    println!("menu commands accepted: {menu_ok}");
     for kind in ["levels", "hueSaturation", "brightnessContrast", "vibrance", "exposure", "colorBalance", "blackWhite", "threshold", "posterize", "photoFilter"] {
         match doc.execute(&format!("layer.newAdjustmentLayer.{kind}"), json!({})) {
             Ok(()) => println!("default {kind}: {}", doc.detail()["layers"][0]["adjustment"]),
@@ -281,6 +284,11 @@ pub fn probe(file: &str) -> i32 {
     println!("shape.info: {:?}", shape.and_then(|_| doc.query("shape.info", json!({}))).map(|v| v.to_string().chars().take(600).collect::<String>()));
     let moved = doc.query("path.moveAnchors", json!({"name": "layer", "layer": doc.detail()["layers"][0]["id"], "anchors": [[0, 1]], "move": [5, 5]}));
     println!("path.moveAnchors: {:?}", moved.map(|v| v.to_string().chars().take(200).collect::<String>()));
+    if let Ok(list) = doc.query("command.list", json!({})) {
+        if let Ok(path) = std::env::var("FILI_COMMANDS_OUT") {
+            let _ = std::fs::write(path, list.to_string());
+        }
+    }
     println!("history: {} applied {}", doc.history().0, doc.history().1);
     doc.undo();
     doc.undo();
@@ -289,4 +297,70 @@ pub fn probe(file: &str) -> i32 {
         println!("{q}: {:?}", doc.query(q, json!({})).map(|v| v.to_string().chars().take(400).collect::<String>()));
     }
     if changed && hidden && undone && tools_ok { 0 } else { 1 }
+}
+
+/// The commands of the window's menus, one by one; prints the ones the engine refuses
+fn probe_menu(file: &str) -> bool {
+    let mut doc = Document::default();
+    if doc.open(Path::new(file)).is_err() {
+        return false;
+    }
+    let out = std::env::temp_dir().join("fili-photocraft-probe.png");
+    let commands = [
+        ("select.rect", json!({"x": 0, "y": 0, "width": 50, "height": 40})),
+        ("edit.copy", json!({})),
+        ("edit.paste", json!({})),
+        ("edit.pasteSpecial.pasteInPlace", json!({})),
+        ("edit.fill", json!({"contents": "color", "color": "#ff8800"})),
+        ("edit.stroke", json!({"width": 3, "color": "#00ff00"})),
+        ("edit.clear", json!({})),
+        ("image.autoTone", json!({})),
+        ("image.autoContrast", json!({})),
+        ("image.autoColor", json!({})),
+        ("filter.blur.gaussianBlur", json!({"radius": 3})),
+        ("filter.blur.boxBlur", json!({"radius": 3})),
+        ("filter.blur.motionBlur", json!({"angle": 10, "distance": 12})),
+        ("filter.blur.surfaceBlur", json!({"radius": 5, "threshold": 15})),
+        ("filter.sharpen.unsharpMask", json!({"amount": 80, "radius": 1, "threshold": 0})),
+        ("filter.sharpen.smartSharpen", json!({"amount": 100, "radius": 1, "reduceNoise": 10})),
+        ("filter.noise.addNoise", json!({"amount": 12.5})),
+        ("filter.noise.median", json!({"radius": 2})),
+        ("filter.stylize.emboss", json!({"angle": 135, "height": 3, "amount": 100})),
+        ("filter.other.highPass", json!({"radius": 10})),
+        ("filter.other.offset", json!({"horizontal": 5, "vertical": 5, "undefinedAreas": "wrap"})),
+        ("filter.blur.blur", json!({})),
+        ("filter.sharpen.sharpen", json!({})),
+        ("filter.stylize.findEdges", json!({})),
+        ("filter.stylize.oilPaint", json!({})),
+        ("layer.new.layer", json!({})),
+        ("layer.duplicate", json!({})),
+        ("layer.groupLayers", json!({})),
+        ("layer.arrange.bringToFront", json!({})),
+        ("layer.mergeVisible", json!({})),
+        ("image.imageRotation.90cw", json!({})),
+        ("image.imageRotation.90ccw", json!({})),
+        ("image.imageRotation.180", json!({})),
+        ("image.imageRotation.flipCanvasHorizontal", json!({})),
+        ("image.imageRotation.flipCanvasVertical", json!({})),
+        ("image.imageSize", json!({"width": 600, "height": 400})),
+        ("image.canvasSize", json!({"width": 700, "height": 500})),
+        ("image.trim", json!({})),
+        ("image.mode.grayscale", json!({})),
+        ("image.mode.rgb", json!({})),
+        ("image.mode.bits16", json!({})),
+        ("image.mode.bits8", json!({})),
+        ("layer.flattenImage", json!({})),
+        ("file.saveACopy", json!({"path": out.to_string_lossy()})),
+        ("file.new", json!({"width": 640, "height": 480})),
+    ];
+    let mut ok = true;
+    for (command, params) in commands {
+        if let Err(e) = doc.execute(command, params) {
+            println!("{command}: {e}");
+            ok = false;
+        }
+    }
+    println!("saved copy: {} bytes", std::fs::metadata(&out).map(|m| m.len()).unwrap_or(0));
+    let _ = std::fs::remove_file(out);
+    ok
 }
