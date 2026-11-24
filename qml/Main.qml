@@ -1088,6 +1088,50 @@ ApplicationWindow {
             color: "transparent"
             border { width: 1; color: FiliTheme.accentColor }
         }
+        // Scroll bars of the view: the thumb is the part of the document shown, it appears once the image is larger than the canvas
+        Repeater {
+            model: [true, false]
+            Rectangle {
+                id: bar
+                required property bool modelData
+                readonly property var span: {
+                    canvas.viewKey;
+                    if (!canvas.loaded || win.docSize.w <= 0 || canvas.width <= 0) return null;
+                    const a = JSON.parse(canvas.toDoc(0, 0)), b = JSON.parse(canvas.toDoc(canvas.width, canvas.height));
+                    const d = modelData ? win.docSize.w : win.docSize.h;
+                    const lo = Math.max(0, modelData ? a[0] : a[1]), hi = Math.min(d, modelData ? b[0] : b[1]);
+                    return hi - lo >= d - 0.5 ? null : { lo: lo / d, hi: hi / d };
+                }
+                visible: span !== null
+                color: "transparent"
+                x: modelData ? 0 : parent.width - 10
+                y: modelData ? parent.height - 10 : 0
+                width: modelData ? parent.width - 10 : 10
+                height: modelData ? 10 : parent.height - 10
+                Rectangle {
+                    readonly property real len: bar.modelData ? bar.width : bar.height
+                    x: bar.modelData && bar.span ? bar.span.lo * len : 2
+                    y: !bar.modelData && bar.span ? bar.span.lo * len : 2
+                    width: bar.modelData ? (bar.span ? Math.max(24, (bar.span.hi - bar.span.lo) * len) : 0) : 6
+                    height: bar.modelData ? 6 : (bar.span ? Math.max(24, (bar.span.hi - bar.span.lo) * len) : 0)
+                    radius: 3
+                    color: barArea.containsMouse || barArea.pressed ? FiliTheme.textSecondary : FiliTheme.muted
+                    opacity: 0.7
+                }
+                MouseArea {
+                    id: barArea
+                    anchors.fill: parent
+                    hoverEnabled: true
+                    function go(e) {
+                        const f = Math.max(0, Math.min(1, (bar.modelData ? e.x / width : e.y / height)));
+                        const c = JSON.parse(canvas.toDoc(canvas.width / 2, canvas.height / 2));
+                        if (bar.modelData) canvas.centerOn(f * win.docSize.w, c[1]); else canvas.centerOn(c[0], f * win.docSize.h);
+                    }
+                    onPressed: e => go(e)
+                    onPositionChanged: e => { if (pressed) go(e); }
+                }
+            }
+        }
         FiliTextField {
             id: textInput
             visible: win.textAt !== null
