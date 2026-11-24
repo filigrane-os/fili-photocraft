@@ -38,6 +38,10 @@ ApplicationWindow {
     Connections { target: canvas; function onChanged() { Qt.callLater(() => { win.errorShown = canvas.error !== ""; }); } }
     property string pathName: ""
     property var snapshotId: -1
+    // The Layers panel filter: by name and by kind (Pixel, Adjustment, Type, Shape); an empty filter shows everything
+    property string layerFilterName: ""
+    property var layerFilterKinds: []
+    readonly property var filteredLayers: layerList.filter(l => (layerFilterName === "" || l.name.toLowerCase().indexOf(layerFilterName.toLowerCase()) >= 0) && (layerFilterKinds.length === 0 || layerFilterKinds.indexOf(l.kind) >= 0))
     // The Curves adjustment of the selected layer: its channel (the composite is "points"), the points and the curve to draw
     property string curveChannel: "points"
     readonly property var adjustment: activeLayer && activeLayer.adjustment ? activeLayer.adjustment : null
@@ -1133,12 +1137,45 @@ ApplicationWindow {
                             }
                         }
                     }
+                    Row {
+                        spacing: 2
+                        width: parent.width
+                        FiliTextField {
+                            width: parent.width - 4 * 30
+                            placeholder: Fili.tr("Filter by name")
+                            clearable: true
+                            text: win.layerFilterName
+                            onTextChanged: win.layerFilterName = text
+                        }
+                        Repeater {
+                            model: [{ kind: "Pixel", icon: "image", tip: "Pixel layers" }, { kind: "Adjustment", icon: "contrast", tip: "Adjustment layers" }, { kind: "Type", icon: "type", tip: "Type layers" }, { kind: "Shape", icon: "square", tip: "Shape layers" }]
+                            Rectangle {
+                                id: kindButton
+                                required property var modelData
+                                readonly property bool on: win.layerFilterKinds.indexOf(modelData.kind) >= 0
+                                width: 28; height: 28; radius: FiliTheme.radiusControl
+                                color: on ? FiliTheme.surfaceActive : kindArea.containsMouse ? FiliTheme.surfaceHover : "transparent"
+                                Accessible.role: Accessible.CheckBox
+                                Accessible.name: Fili.tr(modelData.tip)
+                                Accessible.checked: on
+                                FiliIcon { anchors.centerIn: parent; size: 14; name: kindButton.modelData.icon; color: kindButton.on ? FiliTheme.accentColor : FiliTheme.textSecondary }
+                                MouseArea {
+                                    id: kindArea
+                                    anchors.fill: parent
+                                    hoverEnabled: true
+                                    onClicked: win.layerFilterKinds = kindButton.on ? win.layerFilterKinds.filter(k => k !== kindButton.modelData.kind) : win.layerFilterKinds.concat([kindButton.modelData.kind])
+                                    onEntered: win.showTip(kindButton, Fili.tr(kindButton.modelData.tip))
+                                    onExited: win.hideTip(kindButton)
+                                }
+                            }
+                        }
+                    }
                 }
                 ListView {
                     id: layersView
                     anchors { left: parent.left; right: parent.right; top: layerHeader.bottom; bottom: parent.bottom; bottomMargin: layerButtons.height }
                     clip: true
-                    model: win.layerList
+                    model: win.filteredLayers
                     KineticScroll {}
                     delegate: FiliLayerRow {
                         required property var modelData
