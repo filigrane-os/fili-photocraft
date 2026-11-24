@@ -44,6 +44,170 @@
       "keys": "Ctrl+Shift+Z"
     },
     {
+      "name": "tool-move",
+      "label": "Move",
+      "keys": "V"
+    },
+    {
+      "name": "tool-marquee",
+      "label": "Rectangular Marquee",
+      "keys": "M"
+    },
+    {
+      "name": "tool-ellipse",
+      "label": "Elliptical Marquee"
+    },
+    {
+      "name": "tool-lasso",
+      "label": "Lasso",
+      "keys": "L"
+    },
+    {
+      "name": "tool-wand",
+      "label": "Magic Wand",
+      "keys": "W"
+    },
+    {
+      "name": "tool-quick",
+      "label": "Quick Selection"
+    },
+    {
+      "name": "tool-object",
+      "label": "Object Selection"
+    },
+    {
+      "name": "tool-crop",
+      "label": "Crop",
+      "keys": "C"
+    },
+    {
+      "name": "tool-eyedropper",
+      "label": "Eyedropper",
+      "keys": "I"
+    },
+    {
+      "name": "tool-brush",
+      "label": "Brush",
+      "keys": "B"
+    },
+    {
+      "name": "tool-pencil",
+      "label": "Pencil"
+    },
+    {
+      "name": "tool-stamp",
+      "label": "Clone Stamp",
+      "keys": "S"
+    },
+    {
+      "name": "tool-history",
+      "label": "History Brush",
+      "keys": "Y"
+    },
+    {
+      "name": "tool-heal",
+      "label": "Spot Healing Brush",
+      "keys": "J"
+    },
+    {
+      "name": "tool-remove",
+      "label": "Remove"
+    },
+    {
+      "name": "tool-gradient",
+      "label": "Gradient",
+      "keys": "G"
+    },
+    {
+      "name": "tool-bucket",
+      "label": "Paint Bucket"
+    },
+    {
+      "name": "tool-pen",
+      "label": "Pen",
+      "keys": "P"
+    },
+    {
+      "name": "tool-direct",
+      "label": "Direct Selection",
+      "keys": "A"
+    },
+    {
+      "name": "tool-text",
+      "label": "Text",
+      "keys": "T"
+    },
+    {
+      "name": "tool-rect",
+      "label": "Rectangle",
+      "keys": "U"
+    },
+    {
+      "name": "tool-rounded",
+      "label": "Rounded Rectangle"
+    },
+    {
+      "name": "tool-shapeellipse",
+      "label": "Ellipse"
+    },
+    {
+      "name": "tool-triangle",
+      "label": "Triangle"
+    },
+    {
+      "name": "tool-star",
+      "label": "Star"
+    },
+    {
+      "name": "tool-polygon",
+      "label": "Polygon"
+    },
+    {
+      "name": "tool-line",
+      "label": "Line"
+    },
+    {
+      "name": "tool-eraser",
+      "label": "Eraser",
+      "keys": "E"
+    },
+    {
+      "name": "tool-blur",
+      "label": "Blur",
+      "keys": "R"
+    },
+    {
+      "name": "tool-sharpen",
+      "label": "Sharpen"
+    },
+    {
+      "name": "tool-smudge",
+      "label": "Smudge"
+    },
+    {
+      "name": "tool-dodge",
+      "label": "Dodge",
+      "keys": "O"
+    },
+    {
+      "name": "tool-burn",
+      "label": "Burn"
+    },
+    {
+      "name": "tool-sponge",
+      "label": "Sponge"
+    },
+    {
+      "name": "tool-hand",
+      "label": "Hand",
+      "keys": "H"
+    },
+    {
+      "name": "tool-zoom",
+      "label": "Zoom",
+      "keys": "Z"
+    },
+    {
       "name": "save-copy",
       "label": "Save a Copy…",
       "keys": "Ctrl+Shift+S",
@@ -279,6 +443,42 @@
       "label": "Link Layers"
     },
     {
+      "name": "select-subject",
+      "label": "Subject"
+    },
+    {
+      "name": "select-grow",
+      "label": "Grow"
+    },
+    {
+      "name": "select-similar",
+      "label": "Similar"
+    },
+    {
+      "name": "select-reselect",
+      "label": "Reselect"
+    },
+    {
+      "name": "select-focus-area",
+      "label": "Focus Area"
+    },
+    {
+      "name": "select-to-work-path",
+      "label": "Make Work Path"
+    },
+    {
+      "name": "select-convert-to-shape",
+      "label": "Convert to Shape"
+    },
+    {
+      "name": "select-quick-mask",
+      "label": "Edit in Quick Mask Mode"
+    },
+    {
+      "name": "edit-content-aware-fill",
+      "label": "Content-Aware Fill"
+    },
+    {
       "name": "filter-blur",
       "label": "Blur"
     },
@@ -338,6 +538,39 @@
       "label": "Stroke"
     },
     {
+      "name": "select-border",
+      "label": "Border"
+    },
+    {
+      "name": "select-smooth",
+      "label": "Smooth"
+    },
+    {
+      "name": "select-expand",
+      "label": "Expand"
+    },
+    {
+      "name": "select-contract",
+      "label": "Contract"
+    },
+    {
+      "name": "select-feather",
+      "label": "Feather"
+    },
+    {
+      "name": "select-refine-edge",
+      "label": "Refine Edge"
+    },
+    {
+      "name": "select-color-range",
+      "label": "Color Range"
+    },
+    {
+      "name": "edit-free-transform",
+      "label": "Free Transform",
+      "keys": "Ctrl+T"
+    },
+    {
       "name": "filter-gaussian-blur",
       "label": "Gaussian Blur"
     },
@@ -380,158 +613,6 @@
     {
       "name": "filter-offset",
       "label": "Offset"
-    },
-    {
-      "name": "tool-move",
-      "label": "Move",
-      "keys": "V"
-    },
-    {
-      "name": "tool-marquee",
-      "label": "Rectangular Marquee",
-      "keys": "M"
-    },
-    {
-      "name": "tool-ellipse",
-      "label": "Elliptical Marquee"
-    },
-    {
-      "name": "tool-lasso",
-      "label": "Lasso",
-      "keys": "L"
-    },
-    {
-      "name": "tool-wand",
-      "label": "Magic Wand",
-      "keys": "W"
-    },
-    {
-      "name": "tool-crop",
-      "label": "Crop",
-      "keys": "C"
-    },
-    {
-      "name": "tool-eyedropper",
-      "label": "Eyedropper",
-      "keys": "I"
-    },
-    {
-      "name": "tool-brush",
-      "label": "Brush",
-      "keys": "B"
-    },
-    {
-      "name": "tool-pencil",
-      "label": "Pencil"
-    },
-    {
-      "name": "tool-stamp",
-      "label": "Clone Stamp",
-      "keys": "S"
-    },
-    {
-      "name": "tool-history",
-      "label": "History Brush",
-      "keys": "Y"
-    },
-    {
-      "name": "tool-heal",
-      "label": "Spot Healing Brush",
-      "keys": "J"
-    },
-    {
-      "name": "tool-gradient",
-      "label": "Gradient",
-      "keys": "G"
-    },
-    {
-      "name": "tool-bucket",
-      "label": "Paint Bucket"
-    },
-    {
-      "name": "tool-pen",
-      "label": "Pen",
-      "keys": "P"
-    },
-    {
-      "name": "tool-direct",
-      "label": "Direct Selection",
-      "keys": "A"
-    },
-    {
-      "name": "tool-text",
-      "label": "Text",
-      "keys": "T"
-    },
-    {
-      "name": "tool-rect",
-      "label": "Rectangle",
-      "keys": "U"
-    },
-    {
-      "name": "tool-rounded",
-      "label": "Rounded Rectangle"
-    },
-    {
-      "name": "tool-shapeellipse",
-      "label": "Ellipse"
-    },
-    {
-      "name": "tool-triangle",
-      "label": "Triangle"
-    },
-    {
-      "name": "tool-star",
-      "label": "Star"
-    },
-    {
-      "name": "tool-polygon",
-      "label": "Polygon"
-    },
-    {
-      "name": "tool-line",
-      "label": "Line"
-    },
-    {
-      "name": "tool-eraser",
-      "label": "Eraser",
-      "keys": "E"
-    },
-    {
-      "name": "tool-blur",
-      "label": "Blur",
-      "keys": "R"
-    },
-    {
-      "name": "tool-sharpen",
-      "label": "Sharpen"
-    },
-    {
-      "name": "tool-smudge",
-      "label": "Smudge"
-    },
-    {
-      "name": "tool-dodge",
-      "label": "Dodge",
-      "keys": "O"
-    },
-    {
-      "name": "tool-burn",
-      "label": "Burn"
-    },
-    {
-      "name": "tool-sponge",
-      "label": "Sponge"
-    },
-    {
-      "name": "tool-hand",
-      "label": "Hand",
-      "keys": "H"
-    },
-    {
-      "name": "tool-zoom",
-      "label": "Zoom",
-      "keys": "Z"
     },
     {
       "name": "select-all",

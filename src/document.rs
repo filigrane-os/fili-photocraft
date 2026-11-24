@@ -275,7 +275,7 @@ pub fn probe(file: &str) -> i32 {
     }
     println!("tool commands accepted: {tools_ok}");
     // The commands of the menus (File, Edit, Image, Layer, Filter) with the parameters the window sends
-    let menu_ok = probe_menu(file);
+    let menu_ok = probe_menu(file) & probe_selection(file);
     println!("menu commands accepted: {menu_ok}");
     for kind in ["levels", "hueSaturation", "brightnessContrast", "vibrance", "exposure", "colorBalance", "blackWhite", "threshold", "posterize", "photoFilter"] {
         match doc.execute(&format!("layer.newAdjustmentLayer.{kind}"), json!({})) {
@@ -300,6 +300,47 @@ pub fn probe(file: &str) -> i32 {
         println!("{q}: {:?}", doc.query(q, json!({})).map(|v| v.to_string().chars().take(600).collect::<String>()));
     }
     if changed && hidden && undone && tools_ok { 0 } else { 1 }
+}
+
+/// The selection tools and commands, then the ones that need pixels, on a fresh image
+fn probe_selection(file: &str) -> bool {
+    let mut doc = Document::default();
+    if doc.open(Path::new(file)).is_err() {
+        return false;
+    }
+    let commands = [
+        ("paint.remove", json!({"points": [[20, 20], [60, 40]], "size": 20, "hardness": 80})),
+        ("select.subject", json!({"sampleAllLayers": true})),
+        ("select.rect", json!({"x": 10, "y": 10, "width": 200, "height": 160})),
+        ("select.object", json!({"rect": [10, 10, 100, 80], "sampleAllLayers": true})),
+        ("select.rect", json!({"x": 10, "y": 10, "width": 200, "height": 160})),
+        ("select.quick", json!({"points": [[20, 20], [60, 40]], "size": 20, "mode": "add"})),
+        ("select.modify.expand", json!({"radius": 5})),
+        ("select.modify.smooth", json!({"radius": 5})),
+        ("select.modify.feather", json!({"radius": 5})),
+        ("select.modify.contract", json!({"radius": 3})),
+        ("select.refineEdge", json!({"radius": 0, "smooth": 0, "feather": 0, "contrast": 0, "shiftEdge": 0})),
+        ("select.grow", json!({})),
+        ("select.similar", json!({})),
+        ("select.colorRange", json!({"select": "sampledColors", "color": "#336699", "fuzziness": 40})),
+        ("select.focusArea", json!({})),
+        ("edit.contentAwareFill", json!({})),
+        ("select.editInQuickMaskMode", json!({})),
+        ("select.editInQuickMaskMode", json!({})),
+        ("select.toWorkPath", json!({})),
+        ("select.convertToShape", json!({})),
+        ("select.deselect", json!({})),
+        ("select.reselect", json!({})),
+        ("edit.transform", json!({"scaleX": 90, "scaleY": 90, "rotate": 5, "dx": 3, "dy": 3})),
+    ];
+    let mut ok = true;
+    for (command, params) in commands {
+        if let Err(e) = doc.execute(command, params) {
+            println!("{command}: {e}");
+            ok = false;
+        }
+    }
+    ok
 }
 
 /// The commands of the window's menus, one by one; prints the ones the engine refuses

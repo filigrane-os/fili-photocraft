@@ -59,6 +59,8 @@ ApplicationWindow {
         line: { icon: "minus", tip: "Line", hint: "U" },
         pen: { icon: "pen-tool", tip: "Pen", hint: "P" },
         direct: { icon: "pointer", tip: "Direct Selection", hint: "A" },
+        quick: { icon: "sparkles", tip: "Quick Selection", hint: "W" }, object: { icon: "scan", tip: "Object Selection", hint: "W" },
+        remove: { icon: "x", tip: "Remove", hint: "J" },
         text: { icon: "type", tip: "Text", hint: "T" },
         hand: { icon: "hand", tip: "Hand", hint: "H" }, zoom: { icon: "zoom-in", tip: "Zoom", hint: "Z" },
         marquee: { icon: "square-dashed", tip: "Rectangular Marquee", hint: "M" }, ellipse: { icon: "circle", tip: "Elliptical Marquee", hint: "M" },
@@ -70,7 +72,7 @@ ApplicationWindow {
         heal: { icon: "bandage", tip: "Spot Healing Brush", hint: "J" }, history: { icon: "history", tip: "History Brush", hint: "Y" }, stamp: { icon: "stamp", tip: "Clone Stamp", hint: "S" }
     })
     readonly property var toolGroups: [
-        ["move"], ["marquee", "ellipse"], ["lasso"], ["wand"], ["crop"], ["eyedropper"], ["brush", "pencil"], ["stamp", "history", "heal"], ["gradient", "bucket"], ["pen"], ["direct"], ["text"], ["rect", "rounded", "shapeellipse", "triangle", "star", "polygon", "line"], ["eraser"], ["blur", "sharpen", "smudge"], ["dodge", "burn", "sponge"], ["hand"], ["zoom"]
+        ["move"], ["marquee", "ellipse"], ["lasso"], ["wand", "quick", "object"], ["crop"], ["eyedropper"], ["brush", "pencil"], ["stamp", "history", "heal", "remove"], ["gradient", "bucket"], ["pen"], ["direct"], ["text"], ["rect", "rounded", "shapeellipse", "triangle", "star", "polygon", "line"], ["eraser"], ["blur", "sharpen", "smudge"], ["dodge", "burn", "sponge"], ["hand"], ["zoom"]
     ]
     property var groupPick: ({})
     readonly property var toolModel: {
@@ -107,7 +109,7 @@ ApplicationWindow {
     readonly property var toolKeys: ({ V: "move", I: "eyedropper", G: "bucket", U: "rect", T: "text", H: "hand", Z: "zoom", M: "marquee", L: "lasso", W: "wand", C: "crop", B: "brush", E: "eraser", R: "blur", O: "dodge", J: "heal", Y: "history", S: "stamp" })
     // The tools that draw a stroke: the command of the engine each one runs
     readonly property var strokeTools: ({ brush: "paint.stroke", pencil: "paint.pencil", eraser: "paint.stroke", blur: "paint.blur", sharpen: "paint.sharpen",
-        smudge: "paint.smudge", dodge: "paint.dodge", burn: "paint.burn", sponge: "paint.sponge", heal: "paint.spotHealing", history: "paint.historyBrush", stamp: "paint.cloneStamp" })
+        smudge: "paint.smudge", dodge: "paint.dodge", burn: "paint.burn", sponge: "paint.sponge", heal: "paint.spotHealing", remove: "paint.remove", quick: "select.quick", history: "paint.historyBrush", stamp: "paint.cloneStamp" })
     readonly property bool painting: strokeTools[tool] !== undefined
     readonly property bool usesColor: shapeTool || tool === "pen" || tool === "text" || tool === "brush" || tool === "pencil" || tool === "bucket" || tool === "gradient"
     // Clone Stamp: the point sampled with Alt+click and the offset it keeps to the strokes that follow (aligned)
@@ -118,6 +120,7 @@ ApplicationWindow {
     property real brushHardness: 0.8
     property string brushColor: "#000000"
     function strokeParams() {
+        if (tool === "quick") return JSON.stringify({ points: stroke, size: brushSize, mode: "add", sampleAllLayers: true });
         const p = { layer: activeLayer ? activeLayer.id : 0, points: stroke, size: brushSize, hardness: brushHardness };
         if (tool === "eraser") p.erase = true; else if (usesColor) p.color = brushColor;
         if (tool === "stamp" && stampSource && stroke.length > 0) {
@@ -138,7 +141,7 @@ ApplicationWindow {
     // Move: where the drag began (document), so the preview moves the layer by the whole distance each time
     property var moveFrom: null
     readonly property var shapeKinds: ({ rect: "rect", rounded: "roundedRect", shapeellipse: "ellipse", triangle: "triangle", star: "star", polygon: "polygon" })
-    readonly property var dragTools: ({ marquee: 1, ellipse: 1, crop: 1, rect: 1, rounded: 1, shapeellipse: 1, triangle: 1, star: 1, polygon: 1 })
+    readonly property var dragTools: ({ marquee: 1, ellipse: 1, crop: 1, object: 1, rect: 1, rounded: 1, shapeellipse: 1, triangle: 1, star: 1, polygon: 1 })
     readonly property bool shapeTool: shapeKinds[tool] !== undefined || tool === "line"
     // Text: where the field is open (item and document coordinates) and the size in points
     property var textAt: null
@@ -202,7 +205,7 @@ ApplicationWindow {
     // The blend modes of the layer menu, in Photoshop order (the engine reads the labels)
     readonly property var blendModes: ["Normal", "Dissolve", "Darken", "Multiply", "Color Burn", "Linear Burn", "Darker Color", "Lighten", "Screen", "Color Dodge", "Linear Dodge (Add)", "Lighter Color", "Overlay", "Soft Light", "Hard Light", "Vivid Light", "Linear Light", "Pin Light", "Hard Mix", "Difference", "Exclusion", "Subtract", "Divide", "Hue", "Saturation", "Color", "Luminosity"].map(n => ({ label: Fili.tr(n), value: n }))
     // BEGIN generated dialogs
-    readonly property var dialogSpecs: {"file-new": {"cmd": "file.new", "title": "New Document", "fields": [{"key": "width", "label": "Width (px)", "value": 1920}, {"key": "height", "label": "Height (px)", "value": 1080}], "extra": {}}, "edit-stroke": {"cmd": "edit.stroke", "title": "Stroke the selection", "fields": [{"key": "width", "label": "Width (px)", "value": 3}], "extra": {"color": "$fg"}}, "image-size": {"cmd": "image.imageSize", "title": "Image Size", "fields": [{"key": "width", "label": "Width (px)", "value": "@w"}, {"key": "height", "label": "Height (px)", "value": "@h"}], "extra": {}}, "image-canvas-size": {"cmd": "image.canvasSize", "title": "Canvas Size", "fields": [{"key": "width", "label": "Width (px)", "value": "@w"}, {"key": "height", "label": "Height (px)", "value": "@h"}], "extra": {}}, "layer-style-stroke": {"cmd": "layer.layerStyle.stroke", "title": "Layer Style: Stroke", "fields": [{"key": "size", "label": "Size (px)", "value": 3}], "extra": {"color": "$fg"}}, "filter-gaussian-blur": {"cmd": "filter.blur.gaussianBlur", "title": "Gaussian Blur", "fields": [{"key": "radius", "label": "Radius (px)", "value": 5}], "extra": {}}, "filter-box-blur": {"cmd": "filter.blur.boxBlur", "title": "Box Blur", "fields": [{"key": "radius", "label": "Radius (px)", "value": 5}], "extra": {}}, "filter-motion-blur": {"cmd": "filter.blur.motionBlur", "title": "Motion Blur", "fields": [{"key": "angle", "label": "Angle (°)", "value": 0}, {"key": "distance", "label": "Distance (px)", "value": 20}], "extra": {}}, "filter-surface-blur": {"cmd": "filter.blur.surfaceBlur", "title": "Surface Blur", "fields": [{"key": "radius", "label": "Radius (px)", "value": 5}, {"key": "threshold", "label": "Threshold", "value": 15}], "extra": {}}, "filter-unsharp-mask": {"cmd": "filter.sharpen.unsharpMask", "title": "Unsharp Mask", "fields": [{"key": "amount", "label": "Amount (%)", "value": 80}, {"key": "radius", "label": "Radius (px)", "value": 1}, {"key": "threshold", "label": "Threshold", "value": 0}], "extra": {}}, "filter-smart-sharpen": {"cmd": "filter.sharpen.smartSharpen", "title": "Smart Sharpen", "fields": [{"key": "amount", "label": "Amount (%)", "value": 100}, {"key": "radius", "label": "Radius (px)", "value": 1}, {"key": "reduceNoise", "label": "Reduce noise (%)", "value": 10}], "extra": {}}, "filter-add-noise": {"cmd": "filter.noise.addNoise", "title": "Add Noise", "fields": [{"key": "amount", "label": "Amount (%)", "value": 12.5}], "extra": {}}, "filter-median": {"cmd": "filter.noise.median", "title": "Median", "fields": [{"key": "radius", "label": "Radius (px)", "value": 2}], "extra": {}}, "filter-emboss": {"cmd": "filter.stylize.emboss", "title": "Emboss", "fields": [{"key": "angle", "label": "Angle (°)", "value": 135}, {"key": "height", "label": "Height (px)", "value": 3}, {"key": "amount", "label": "Amount (%)", "value": 100}], "extra": {}}, "filter-high-pass": {"cmd": "filter.other.highPass", "title": "High Pass", "fields": [{"key": "radius", "label": "Radius (px)", "value": 10}], "extra": {}}, "filter-offset": {"cmd": "filter.other.offset", "title": "Offset", "fields": [{"key": "horizontal", "label": "Horizontal (px)", "value": 0}, {"key": "vertical", "label": "Vertical (px)", "value": 0}], "extra": {"undefinedAreas": "wrap"}}}
+    readonly property var dialogSpecs: {"file-new": {"cmd": "file.new", "title": "New Document", "fields": [{"key": "width", "label": "Width (px)", "value": 1920}, {"key": "height", "label": "Height (px)", "value": 1080}], "extra": {}}, "edit-stroke": {"cmd": "edit.stroke", "title": "Stroke the selection", "fields": [{"key": "width", "label": "Width (px)", "value": 3}], "extra": {"color": "$fg"}}, "image-size": {"cmd": "image.imageSize", "title": "Image Size", "fields": [{"key": "width", "label": "Width (px)", "value": "@w"}, {"key": "height", "label": "Height (px)", "value": "@h"}], "extra": {}}, "image-canvas-size": {"cmd": "image.canvasSize", "title": "Canvas Size", "fields": [{"key": "width", "label": "Width (px)", "value": "@w"}, {"key": "height", "label": "Height (px)", "value": "@h"}], "extra": {}}, "layer-style-stroke": {"cmd": "layer.layerStyle.stroke", "title": "Layer Style: Stroke", "fields": [{"key": "size", "label": "Size (px)", "value": 3}], "extra": {"color": "$fg"}}, "select-border": {"cmd": "select.modify.border", "title": "Border Selection", "fields": [{"key": "radius", "label": "Width (px)", "value": 5}], "extra": {}}, "select-smooth": {"cmd": "select.modify.smooth", "title": "Smooth Selection", "fields": [{"key": "radius", "label": "Radius (px)", "value": 5}], "extra": {}}, "select-expand": {"cmd": "select.modify.expand", "title": "Expand Selection", "fields": [{"key": "radius", "label": "By (px)", "value": 5}], "extra": {}}, "select-contract": {"cmd": "select.modify.contract", "title": "Contract Selection", "fields": [{"key": "radius", "label": "By (px)", "value": 5}], "extra": {}}, "select-feather": {"cmd": "select.modify.feather", "title": "Feather Selection", "fields": [{"key": "radius", "label": "Radius (px)", "value": 5}], "extra": {}}, "select-refine-edge": {"cmd": "select.refineEdge", "title": "Refine Edge", "fields": [{"key": "radius", "label": "Radius (px)", "value": 0}, {"key": "smooth", "label": "Smooth", "value": 0}, {"key": "feather", "label": "Feather (px)", "value": 0}, {"key": "contrast", "label": "Contrast (%)", "value": 0}, {"key": "shiftEdge", "label": "Shift edge (%)", "value": 0}], "extra": {}}, "select-color-range": {"cmd": "select.colorRange", "title": "Color Range", "fields": [{"key": "fuzziness", "label": "Fuzziness", "value": 40}], "extra": {"select": "sampledColors", "color": "$fg"}}, "edit-free-transform": {"cmd": "edit.transform", "title": "Free Transform", "fields": [{"key": "scaleX", "label": "Scale X (%)", "value": 100}, {"key": "scaleY", "label": "Scale Y (%)", "value": 100}, {"key": "rotate", "label": "Rotate (°)", "value": 0}, {"key": "dx", "label": "Move X (px)", "value": 0}, {"key": "dy", "label": "Move Y (px)", "value": 0}], "extra": {}}, "filter-gaussian-blur": {"cmd": "filter.blur.gaussianBlur", "title": "Gaussian Blur", "fields": [{"key": "radius", "label": "Radius (px)", "value": 5}], "extra": {}}, "filter-box-blur": {"cmd": "filter.blur.boxBlur", "title": "Box Blur", "fields": [{"key": "radius", "label": "Radius (px)", "value": 5}], "extra": {}}, "filter-motion-blur": {"cmd": "filter.blur.motionBlur", "title": "Motion Blur", "fields": [{"key": "angle", "label": "Angle (°)", "value": 0}, {"key": "distance", "label": "Distance (px)", "value": 20}], "extra": {}}, "filter-surface-blur": {"cmd": "filter.blur.surfaceBlur", "title": "Surface Blur", "fields": [{"key": "radius", "label": "Radius (px)", "value": 5}, {"key": "threshold", "label": "Threshold", "value": 15}], "extra": {}}, "filter-unsharp-mask": {"cmd": "filter.sharpen.unsharpMask", "title": "Unsharp Mask", "fields": [{"key": "amount", "label": "Amount (%)", "value": 80}, {"key": "radius", "label": "Radius (px)", "value": 1}, {"key": "threshold", "label": "Threshold", "value": 0}], "extra": {}}, "filter-smart-sharpen": {"cmd": "filter.sharpen.smartSharpen", "title": "Smart Sharpen", "fields": [{"key": "amount", "label": "Amount (%)", "value": 100}, {"key": "radius", "label": "Radius (px)", "value": 1}, {"key": "reduceNoise", "label": "Reduce noise (%)", "value": 10}], "extra": {}}, "filter-add-noise": {"cmd": "filter.noise.addNoise", "title": "Add Noise", "fields": [{"key": "amount", "label": "Amount (%)", "value": 12.5}], "extra": {}}, "filter-median": {"cmd": "filter.noise.median", "title": "Median", "fields": [{"key": "radius", "label": "Radius (px)", "value": 2}], "extra": {}}, "filter-emboss": {"cmd": "filter.stylize.emboss", "title": "Emboss", "fields": [{"key": "angle", "label": "Angle (°)", "value": 135}, {"key": "height", "label": "Height (px)", "value": 3}, {"key": "amount", "label": "Amount (%)", "value": 100}], "extra": {}}, "filter-high-pass": {"cmd": "filter.other.highPass", "title": "High Pass", "fields": [{"key": "radius", "label": "Radius (px)", "value": 10}], "extra": {}}, "filter-offset": {"cmd": "filter.other.offset", "title": "Offset", "fields": [{"key": "horizontal", "label": "Horizontal (px)", "value": 0}, {"key": "vertical", "label": "Vertical (px)", "value": 0}], "extra": {"undefinedAreas": "wrap"}}}
     // END generated dialogs
     // BEGIN generated helpers
     function runCommand(cmd, params) { canvas.run(cmd, JSON.stringify(params)); }
@@ -371,6 +374,15 @@ ApplicationWindow {
         "layer-clipping-create": { on: () => canvas.loaded, run: () => win.runCommand("layer.createClippingMask", {}) },
         "layer-clipping-release": { on: () => canvas.loaded, run: () => win.runCommand("layer.releaseClippingMask", {}) },
         "layer-link": { on: () => canvas.loaded, run: () => win.runCommand("layer.linkLayers", {}) },
+        "select-subject": { on: () => canvas.loaded, run: () => win.runCommand("select.subject", {}) },
+        "select-grow": { on: () => canvas.loaded, run: () => win.runCommand("select.grow", {}) },
+        "select-similar": { on: () => canvas.loaded, run: () => win.runCommand("select.similar", {}) },
+        "select-reselect": { on: () => canvas.loaded, run: () => win.runCommand("select.reselect", {}) },
+        "select-focus-area": { on: () => canvas.loaded, run: () => win.runCommand("select.focusArea", {}) },
+        "select-to-work-path": { on: () => canvas.loaded, run: () => win.runCommand("select.toWorkPath", {}) },
+        "select-convert-to-shape": { on: () => canvas.loaded, run: () => win.runCommand("select.convertToShape", {}) },
+        "select-quick-mask": { on: () => canvas.loaded, run: () => win.runCommand("select.editInQuickMaskMode", {}) },
+        "edit-content-aware-fill": { on: () => canvas.loaded, run: () => win.runCommand("edit.contentAwareFill", {}) },
         "filter-blur": { on: () => canvas.loaded, run: () => win.runCommand("filter.blur.blur", {}) },
         "filter-blur-more": { on: () => canvas.loaded, run: () => win.runCommand("filter.blur.blurMore", {}) },
         "filter-sharpen": { on: () => canvas.loaded, run: () => win.runCommand("filter.sharpen.sharpen", {}) },
@@ -385,6 +397,14 @@ ApplicationWindow {
         "image-size": { on: () => canvas.loaded, run: () => win.openParams("image-size") },
         "image-canvas-size": { on: () => canvas.loaded, run: () => win.openParams("image-canvas-size") },
         "layer-style-stroke": { on: () => canvas.loaded, run: () => win.openParams("layer-style-stroke") },
+        "select-border": { on: () => canvas.loaded, run: () => win.openParams("select-border") },
+        "select-smooth": { on: () => canvas.loaded, run: () => win.openParams("select-smooth") },
+        "select-expand": { on: () => canvas.loaded, run: () => win.openParams("select-expand") },
+        "select-contract": { on: () => canvas.loaded, run: () => win.openParams("select-contract") },
+        "select-feather": { on: () => canvas.loaded, run: () => win.openParams("select-feather") },
+        "select-refine-edge": { on: () => canvas.loaded, run: () => win.openParams("select-refine-edge") },
+        "select-color-range": { on: () => canvas.loaded, run: () => win.openParams("select-color-range") },
+        "edit-free-transform": { on: () => canvas.loaded, run: () => win.openParams("edit-free-transform") },
         "filter-gaussian-blur": { on: () => canvas.loaded, run: () => win.openParams("filter-gaussian-blur") },
         "filter-box-blur": { on: () => canvas.loaded, run: () => win.openParams("filter-box-blur") },
         "filter-motion-blur": { on: () => canvas.loaded, run: () => win.openParams("filter-motion-blur") },
@@ -397,6 +417,9 @@ ApplicationWindow {
         "filter-high-pass": { on: () => canvas.loaded, run: () => win.openParams("filter-high-pass") },
         "filter-offset": { on: () => canvas.loaded, run: () => win.openParams("filter-offset") },
         // END generated commands
+        "tool-quick": { on: () => true, run: () => win.selectTool("quick") },
+        "tool-object": { on: () => true, run: () => win.selectTool("object") },
+        "tool-remove": { on: () => true, run: () => win.selectTool("remove") },
         "select-all": { on: () => canvas.loaded, run: () => { canvas.run("select.all", "{}")} },
         "select-inverse": { on: () => canvas.loaded, run: () => canvas.run("select.inverse", "{}") },
         "select-sky": { on: () => canvas.loaded, run: () => canvas.run("select.sky", "{}") },
@@ -495,6 +518,7 @@ ApplicationWindow {
     Shortcut { sequence: "Ctrl+N"; onActivated: win.runAction("file-new") }
     Shortcut { sequence: "Ctrl+Alt+I"; onActivated: win.runAction("image-size") }
     Shortcut { sequence: "Ctrl+Alt+C"; onActivated: win.runAction("image-canvas-size") }
+    Shortcut { sequence: "Ctrl+T"; onActivated: win.runAction("edit-free-transform") }
     Shortcut { sequence: "Ctrl+Shift+S"; onActivated: win.runAction("save-copy") }
     // END generated shortcuts
     Shortcut { sequence: "Ctrl+A"; onActivated: win.runAction("select-all") }
@@ -567,7 +591,7 @@ ApplicationWindow {
             Text { anchors.verticalCenter: parent.verticalCenter; text: win.tool === "wand" ? Fili.tr("Shift adds to the selection, Alt subtracts") : ""; font.family: FiliTheme.font; font.pixelSize: FiliTheme.size; color: FiliTheme.textSecondary }
         }
         Text {
-            visible: win.tool === "marquee" || win.tool === "ellipse" || win.tool === "lasso" || win.tool === "crop" || win.tool === "pen" || win.tool === "direct"
+            visible: win.tool === "marquee" || win.tool === "ellipse" || win.tool === "lasso" || win.tool === "crop" || win.tool === "pen" || win.tool === "direct" || win.tool === "object"
             text: win.tool === "direct" ? Fili.tr("Drag an anchor point of the selected shape") : win.tool === "pen" ? Fili.tr("Click to add points, Enter or double-click to close the shape, Esc to cancel") : win.tool === "crop" ? Fili.tr("Drag the area to keep") : Fili.tr("Drag to select, click to deselect")
             font.family: FiliTheme.font; font.pixelSize: FiliTheme.size; color: FiliTheme.textSecondary
         }
@@ -1265,7 +1289,7 @@ ApplicationWindow {
             property point last
             function addPoint(e) {
                 win.stroke = win.stroke.concat([JSON.parse(canvas.toDoc(e.x, e.y))]);
-                canvas.preview(win.strokeTools[win.tool], win.strokeParams());
+                if (win.tool !== "remove") canvas.preview(win.strokeTools[win.tool], win.strokeParams());
             }
             onPressed: e => {
                 last = Qt.point(e.x, e.y);
@@ -1314,10 +1338,11 @@ ApplicationWindow {
                         } else {
                             const params = { x: r.x, y: r.y, width: r.w, height: r.h };
                             if (win.tool === "ellipse") params.ellipse = true;
-                            canvas.run(win.tool === "crop" ? "image.crop" : "select.rect", JSON.stringify(params));
+                            if (win.tool === "object") canvas.run("select.object", JSON.stringify({ rect: [r.x, r.y, r.w, r.h], sampleAllLayers: true }));
+                            else canvas.run(win.tool === "crop" ? "image.crop" : "select.rect", JSON.stringify(params));
                         }
                         if (win.tool === "crop") canvas.zoomFit();
-                    } else if (win.tool === "marquee" || win.tool === "ellipse") {
+                    } else if (win.tool === "marquee" || win.tool === "ellipse" || win.tool === "object") {
                         canvas.run("select.deselect", "{}");
                     }
                 }

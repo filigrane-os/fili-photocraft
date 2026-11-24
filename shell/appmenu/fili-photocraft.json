@@ -94,6 +94,18 @@
         {
           "label": "Stroke…",
           "exec": "fili-photocraft ctl --pid %pid action edit-stroke"
+        },
+        {
+          "label": "Content-Aware Fill",
+          "exec": "fili-photocraft ctl --pid %pid action edit-content-aware-fill"
+        },
+        {
+          "sep": true
+        },
+        {
+          "label": "Free Transform…",
+          "keys": "Ctrl+T",
+          "exec": "fili-photocraft ctl --pid %pid action edit-free-transform"
         }
       ]
     },
@@ -437,13 +449,87 @@
           "exec": "fili-photocraft ctl --pid %pid action deselect"
         },
         {
+          "label": "Reselect",
+          "exec": "fili-photocraft ctl --pid %pid action select-reselect"
+        },
+        {
           "label": "Inverse",
           "keys": "Ctrl+Shift+I",
           "exec": "fili-photocraft ctl --pid %pid action select-inverse"
         },
         {
+          "sep": true
+        },
+        {
+          "label": "Subject",
+          "exec": "fili-photocraft ctl --pid %pid action select-subject"
+        },
+        {
           "label": "Sky",
           "exec": "fili-photocraft ctl --pid %pid action select-sky"
+        },
+        {
+          "label": "Focus Area",
+          "exec": "fili-photocraft ctl --pid %pid action select-focus-area"
+        },
+        {
+          "label": "Color Range…",
+          "exec": "fili-photocraft ctl --pid %pid action select-color-range"
+        },
+        {
+          "sep": true
+        },
+        {
+          "label": "Modify",
+          "children": [
+            {
+              "label": "Border…",
+              "exec": "fili-photocraft ctl --pid %pid action select-border"
+            },
+            {
+              "label": "Smooth…",
+              "exec": "fili-photocraft ctl --pid %pid action select-smooth"
+            },
+            {
+              "label": "Expand…",
+              "exec": "fili-photocraft ctl --pid %pid action select-expand"
+            },
+            {
+              "label": "Contract…",
+              "exec": "fili-photocraft ctl --pid %pid action select-contract"
+            },
+            {
+              "label": "Feather…",
+              "exec": "fili-photocraft ctl --pid %pid action select-feather"
+            }
+          ]
+        },
+        {
+          "label": "Grow",
+          "exec": "fili-photocraft ctl --pid %pid action select-grow"
+        },
+        {
+          "label": "Similar",
+          "exec": "fili-photocraft ctl --pid %pid action select-similar"
+        },
+        {
+          "label": "Refine Edge…",
+          "exec": "fili-photocraft ctl --pid %pid action select-refine-edge"
+        },
+        {
+          "sep": true
+        },
+        {
+          "label": "Make Work Path",
+          "exec": "fili-photocraft ctl --pid %pid action select-to-work-path"
+        },
+        {
+          "label": "Convert to Shape",
+          "exec": "fili-photocraft ctl --pid %pid action select-convert-to-shape"
+        },
+        {
+          "label": "Edit in Quick Mask Mode",
+          "exec": "fili-photocraft ctl --pid %pid action select-quick-mask"
         }
       ]
     },
@@ -621,6 +707,14 @@
           "exec": "fili-photocraft ctl --pid %pid action tool-wand"
         },
         {
+          "label": "Quick Selection",
+          "exec": "fili-photocraft ctl --pid %pid action tool-quick"
+        },
+        {
+          "label": "Object Selection",
+          "exec": "fili-photocraft ctl --pid %pid action tool-object"
+        },
+        {
           "label": "Crop",
           "keys": "C",
           "exec": "fili-photocraft ctl --pid %pid action tool-crop"
@@ -653,6 +747,10 @@
           "label": "Spot Healing Brush",
           "keys": "J",
           "exec": "fili-photocraft ctl --pid %pid action tool-heal"
+        },
+        {
+          "label": "Remove",
+          "exec": "fili-photocraft ctl --pid %pid action tool-remove"
         },
         {
           "label": "Gradient",
