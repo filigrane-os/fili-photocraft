@@ -26,6 +26,10 @@
           "exec": "fili-photocraft ctl --pid %pid action save-copy"
         },
         {
+          "label": "Export Layers to Files…",
+          "exec": "fili-photocraft ctl --pid %pid action export-layers"
+        },
+        {
           "sep": true
         },
         {

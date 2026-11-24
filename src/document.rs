@@ -422,6 +422,7 @@ fn probe_menu(file: &str) -> bool {
         ("layer.createClippingMask", json!({})),
         ("layer.releaseClippingMask", json!({})),
         ("layer.flattenImage", json!({})),
+        ("file.export.layersToFiles", json!({"dir": std::env::temp_dir().join("fili-photocraft-probe-layers").to_string_lossy(), "format": "png"})),
         ("file.saveACopy", json!({"path": out.to_string_lossy()})),
         ("file.new", json!({"width": 640, "height": 480})),
     ];
@@ -434,5 +435,6 @@ fn probe_menu(file: &str) -> bool {
     }
     println!("saved copy: {} bytes", std::fs::metadata(&out).map(|m| m.len()).unwrap_or(0));
     let _ = std::fs::remove_file(out);
+    let _ = std::fs::remove_dir_all(std::env::temp_dir().join("fili-photocraft-probe-layers"));
     ok
 }

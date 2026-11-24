@@ -50,6 +50,10 @@
       "args": "[PATH]"
     },
     {
+      "name": "export-layers",
+      "label": "Export Layers to Files"
+    },
+    {
       "name": "edit-cut",
       "label": "Cut",
       "keys": "Ctrl+X"

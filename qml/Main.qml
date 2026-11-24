@@ -260,6 +260,11 @@ ApplicationWindow {
     function zoomStep(factor) { canvas.zoomAt(factor, canvas.width / 2, canvas.height / 2); }
 
     // BEGIN generated dialogs items
+    FolderDialog {
+        id: exportLayersDialog
+        title: Fili.tr("Export Layers to Files")
+        onAccepted: win.runCommand("file.export.layersToFiles", { dir: decodeURIComponent(selectedFolder.toString().replace("file://", "")), format: "png" })
+    }
     FileDialog {
         id: saveDialog
         title: Fili.tr("Save a Copy")
@@ -363,6 +368,7 @@ ApplicationWindow {
         "panel-history": { on: () => true, run: () => win.openPanel(1, 3) },
         // BEGIN generated commands (scripts of the menus: File, Edit, Image, Layer, Filter)
         "save-copy": { on: () => canvas.loaded, run: () => saveDialog.open() },
+        "export-layers": { on: () => canvas.loaded, run: () => exportLayersDialog.open() },
         "edit-cut": { on: () => canvas.loaded, run: () => win.runCommand("edit.cut", {}) },
         "edit-copy": { on: () => canvas.loaded, run: () => win.runCommand("edit.copy", {}) },
         "edit-copy-merged": { on: () => canvas.loaded, run: () => win.runCommand("edit.copyMerged", {}) },
