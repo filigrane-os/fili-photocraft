@@ -1342,9 +1342,10 @@ ApplicationWindow {
         id: documentTab
         anchors { left: toolStrip.right; right: panelBar.left; top: optionsBar.bottom }
         height: implicitHeight
+        maxTabWidth: 360
         closable: false
         detachable: false
-        model: canvas.loaded ? [canvas.title + " @ " + Math.round(canvas.zoom * 100) + "%"] : []
+        model: canvas.loaded ? [canvas.title + " @ " + Math.round(canvas.zoom * 100) + "% (RGB/8)"] : []
     }
     // Rulers in document pixels along the top and the left of the canvas: a tick every step chosen to be at least 70 px apart
     Repeater {
