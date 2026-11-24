@@ -39,6 +39,17 @@ ApplicationWindow {
     property string pathName: ""
     property var snapshotId: -1
     // The Layers panel filter: by name and by kind (Pixel, Adjustment, Type, Shape); an empty filter shows everything
+    // Brush presets of the engine: picking one sets the size and the hardness and makes it the engine's current brush
+    property string brushPreset: "Hard Round"
+    readonly property var brushPresets: { canvas.layers; try { return JSON.parse(canvas.ask("brush.presets.list", "{}")).presets; } catch (e) { return []; } }
+    function pickBrushPreset(name) {
+        const p = brushPresets.find(x => x.name === name);
+        if (!p) return;
+        brushPreset = name;
+        brushSize = Math.max(1, Math.min(200, p.size));
+        brushHardness = p.hardness;
+        canvas.ask("brush.presets.setCurrent", JSON.stringify({ name: name }));
+    }
     property string layerFilterName: ""
     property var layerFilterKinds: []
     readonly property var filteredLayers: layerList.filter(l => (layerFilterName === "" || l.name.toLowerCase().indexOf(layerFilterName.toLowerCase()) >= 0) && (layerFilterKinds.length === 0 || layerFilterKinds.indexOf(l.kind) >= 0))
@@ -641,6 +652,14 @@ ApplicationWindow {
         Row {
             visible: win.painting
             spacing: FiliTheme.space3
+            FiliSelect {
+                anchors.verticalCenter: parent.verticalCenter
+                width: 160
+                visible: win.tool === "brush" || win.tool === "pencil" || win.tool === "eraser"
+                model: win.brushPresets.map(p => ({ label: p.name, value: p.name }))
+                current: win.brushPreset
+                onPicked: v => win.pickBrushPreset(v)
+            }
             Text { anchors.verticalCenter: parent.verticalCenter; text: Fili.tr("Size") + " " + Math.round(win.brushSize) + " px"; font.family: FiliTheme.font; font.pixelSize: FiliTheme.size; color: FiliTheme.text }
             FiliSlider { width: 120; anchors.verticalCenter: parent.verticalCenter; value: (win.brushSize - 1) / 199; onMoved: v => win.brushSize = 1 + v * 199 }
             Text { anchors.verticalCenter: parent.verticalCenter; text: Fili.tr("Hardness") + " " + Math.round(win.brushHardness * 100) + " %"; font.family: FiliTheme.font; font.pixelSize: FiliTheme.size; color: FiliTheme.text }

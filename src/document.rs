@@ -285,7 +285,7 @@ pub fn probe(file: &str) -> i32 {
         }
     }
     let shape = doc.query("shape.create", json!({"kind": "path", "fill": "#336699", "path": {"subpaths": [{"closed": true, "knots": [[10, 10], [80, 20], [40, 70]]}]}}));
-    println!("shape.info: {:?}", shape.and_then(|_| doc.query("shape.info", json!({}))).map(|v| v.to_string().chars().take(600).collect::<String>()));
+    println!("shape.info: {:?}", shape.and_then(|_| doc.query("shape.info", json!({}))).map(|v| v.to_string().chars().take(900).collect::<String>()));
     let moved = doc.query("path.moveAnchors", json!({"name": "layer", "layer": doc.detail()["layers"][0]["id"], "anchors": [[0, 1]], "move": [5, 5]}));
     println!("path.moveAnchors: {:?}", moved.map(|v| v.to_string().chars().take(200).collect::<String>()));
     if let Ok(list) = doc.query("command.list", json!({})) {
@@ -297,7 +297,7 @@ pub fn probe(file: &str) -> i32 {
     doc.undo();
     doc.undo();
     println!("after two undos: {} entries, applied {}", doc.history().0.as_array().map_or(0, Vec::len), doc.history().1);
-    for q in ["type.fonts", "channel.list", "path.list", "swatches.list", "gradient.presets.list", "pattern.list"] {
+    for q in ["brush.presets.list", "type.fonts", "channel.list", "path.list", "swatches.list", "gradient.presets.list", "pattern.list"] {
         println!("{q}: {:?}", doc.query(q, json!({})).map(|v| v.to_string().chars().take(600).collect::<String>()));
     }
     if changed && hidden && undone && tools_ok { 0 } else { 1 }
@@ -378,6 +378,7 @@ fn probe_menu(file: &str) -> bool {
         ("filter.stylize.findEdges", json!({})),
         ("filter.stylize.oilPaint", json!({})),
         ("history.newSnapshot", json!({"name": "probe"})),
+        ("brush.presets.setCurrent", json!({"name": "Soft Round"})),
         ("layer.pickAt", json!({"x": 10, "y": 10, "target": "layer", "select": true})),
         ("layer.new.layer", json!({})),
         ("layer.duplicate", json!({})),
