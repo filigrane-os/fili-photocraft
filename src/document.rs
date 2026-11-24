@@ -166,6 +166,8 @@ pub fn flat_layers(layers: &Value) -> Value {
                 "visible": node["visible"],
                 "opacity": node["opacity"],
                 "blend": node["blend"],
+                "fill": node["fill"],
+                "bounds": node["bounds"],
                 "selected": node["selected"],
                 "depth": depth,
                 // Kind and parameters of an adjustment layer (what `layer.setAdjustment` takes)

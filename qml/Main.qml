@@ -477,7 +477,7 @@ ApplicationWindow {
         anchors { right: parent.right; top: optionsBar.bottom; bottom: debug.top }
         FiliDockGroup {
             Layout.fillWidth: true
-            Layout.preferredHeight: 230
+            Layout.preferredHeight: 220
             tabs: [Fili.tr("Color"), Fili.tr("Swatches"), Fili.tr("Navigator")]
             currentIndex: win.topTab
             onTabClicked: i => win.topTab = i
@@ -624,7 +624,7 @@ ApplicationWindow {
         }
         FiliDockGroup {
             Layout.fillWidth: true
-            Layout.preferredHeight: win.curvesShown || win.adjustmentSliders.length > 3 ? 440 : win.adjustmentSliders.length > 0 ? 320 : 290
+            Layout.preferredHeight: win.curvesShown || win.adjustmentSliders.length > 3 ? 440 : win.adjustmentSliders.length > 0 ? 320 : 170
             tabs: [Fili.tr("Properties"), Fili.tr("Adjustments")]
             currentIndex: win.propertiesTab
             onTabClicked: i => win.propertiesTab = i
@@ -632,15 +632,6 @@ ApplicationWindow {
                 Column {
                     anchors { left: parent.left; right: parent.right; top: parent.top; margins: FiliTheme.space3 }
                     spacing: FiliTheme.space3
-                    Text {
-                        width: parent.width
-                        text: win.activeLayer ? win.activeLayer.name : Fili.tr("No layer selected")
-                        elide: Text.ElideRight
-                        font.family: FiliTheme.font
-                        font.pixelSize: FiliTheme.size
-                        font.weight: FiliTheme.weightAccent
-                        color: win.activeLayer ? FiliTheme.text : FiliTheme.textSecondary
-                    }
                     // Curves: the channel, the graph, the point under the pointer, and a way back to the straight line
                     Column {
                         visible: win.curvesShown
@@ -713,60 +704,43 @@ ApplicationWindow {
                         }
                     }
                     Column {
-                        visible: win.activeLayer !== null && !win.curvesShown
+                        visible: win.activeLayer !== null && !win.curvesShown && win.adjustmentSliders.length === 0
                         width: parent.width
                         spacing: FiliTheme.space3
-                        FiliSelect {
-                            width: parent.width
-                            model: win.blendModes
-                            current: win.activeLayer ? win.activeLayer.blend : "Normal"
-                            onPicked: v => win.activeLayer && win.setLayer(win.activeLayer.id, { blend: v })
+                        Row {
+                            spacing: FiliTheme.space2
+                            FiliIcon { anchors.verticalCenter: parent.verticalCenter; size: 18; name: win.activeLayer && win.activeLayer.kind === "Type" ? "type" : win.activeLayer && win.activeLayer.kind === "Shape" ? "square" : "image"; color: FiliTheme.textSecondary }
+                            Text { anchors.verticalCenter: parent.verticalCenter; text: win.activeLayer ? win.activeLayer.name : ""; font.family: FiliTheme.font; font.pixelSize: FiliTheme.sizeList; font.weight: Font.DemiBold; color: FiliTheme.text }
+                            Text { anchors.verticalCenter: parent.verticalCenter; text: win.activeLayer ? win.activeLayer.kind : ""; font.family: FiliTheme.font; font.pixelSize: FiliTheme.sizeSmall; color: FiliTheme.muted }
                         }
-                    Flow {
-                        width: parent.width
-                        spacing: FiliTheme.space3
-                        Text { text: Fili.tr("Lock"); font.family: FiliTheme.font; font.pixelSize: FiliTheme.size; color: FiliTheme.text }
-                        Repeater {
-                            model: [{ key: "transparency", label: "Transparency" }, { key: "pixels", label: "Pixels" }, { key: "position", label: "Position" }, { key: "all", label: "All" }]
-                            FiliCheckBox {
-                                required property var modelData
-                                label: Fili.tr(modelData.label)
-                                checked: win.activeLayer && win.activeLayer.locks ? win.activeLayer.locks[modelData.key] === true : false
-                                onToggled: win.setLayer(win.activeLayer.id, { locks: { [modelData.key]: !checked } })
+                        Grid {
+                            columns: 4
+                            columnSpacing: FiliTheme.space3
+                            rowSpacing: FiliTheme.space2
+                            Repeater {
+                                model: [["X", 0], ["Y", 1], ["W", 2], ["H", 3]]
+                                Row {
+                                    required property var modelData
+                                    spacing: FiliTheme.space2
+                                    Text { text: modelData[0]; font.family: FiliTheme.font; font.pixelSize: FiliTheme.size; color: FiliTheme.muted }
+                                    Text { text: (win.activeLayer && win.activeLayer.bounds ? win.activeLayer.bounds[modelData[1]] : "") + " px"; font.family: FiliTheme.font; font.pixelSize: FiliTheme.size; color: FiliTheme.text }
+                                }
                             }
                         }
-                    }
-                    Item {
-                        width: parent.width
-                        height: opacity.implicitHeight
-                        Text {
-                            id: opacityLabel
-                            anchors { left: parent.left; verticalCenter: parent.verticalCenter }
-                            text: Fili.tr("Opacity")
-                            font.family: FiliTheme.font
-                            font.pixelSize: FiliTheme.size
-                            color: FiliTheme.text
+                        Item {
+                            width: parent.width
+                            height: 26
+                            Text { id: fillLabel; anchors { left: parent.left; verticalCenter: parent.verticalCenter } text: Fili.tr("Fill"); font.family: FiliTheme.font; font.pixelSize: FiliTheme.size; color: FiliTheme.text }
+                            Text { id: fillValue; anchors { right: parent.right; verticalCenter: parent.verticalCenter } width: 48; horizontalAlignment: Text.AlignRight; text: Math.round((fillSlider.dragging ? fillSlider.value : fillSlider.shown) * 100) + " %"; font.family: FiliTheme.font; font.pixelSize: FiliTheme.size; color: FiliTheme.textSecondary }
+                            FiliSlider {
+                                id: fillSlider
+                                readonly property real shown: win.activeLayer && win.activeLayer.fill !== undefined ? win.activeLayer.fill : 1
+                                anchors { left: fillLabel.right; right: fillValue.left; leftMargin: FiliTheme.space3; rightMargin: FiliTheme.space3; verticalCenter: parent.verticalCenter }
+                                Binding on value { when: !fillSlider.dragging; value: fillSlider.shown }
+                                onMoved: v => value = v
+                                onReleased: if (win.activeLayer) win.setLayer(win.activeLayer.id, { fill: value })
+                            }
                         }
-                        Text {
-                            id: opacityValue
-                            anchors { right: parent.right; verticalCenter: parent.verticalCenter }
-                            width: opacityMetrics.advanceWidth
-                            horizontalAlignment: Text.AlignRight
-                            text: Math.round(opacity.value * 100) + " %"
-                            font.family: FiliTheme.font
-                            font.pixelSize: FiliTheme.size
-                            color: FiliTheme.textSecondary
-                            TextMetrics { id: opacityMetrics; font: opacityValue.font; text: "100 %" }
-                        }
-                        FiliSlider {
-                            id: opacity
-                            anchors { left: opacityLabel.right; right: opacityValue.left; leftMargin: FiliTheme.space3; rightMargin: FiliTheme.space3; verticalCenter: parent.verticalCenter }
-                            // Follows the layer, except while the thumb is held
-                            Binding on value { when: !opacity.dragging; value: win.activeLayer ? win.activeLayer.opacity : 1 }
-                            onMoved: v => value = v
-                            onReleased: if (win.activeLayer) win.setLayer(win.activeLayer.id, { opacity: value })
-                        }
-                    }
                     }
                 }
             }
@@ -792,9 +766,66 @@ ApplicationWindow {
             currentIndex: win.layersTab
             onTabClicked: i => win.layersTab = i
             Item {
+                Column {
+                    id: layerHeader
+                    anchors { left: parent.left; right: parent.right; top: parent.top; margins: FiliTheme.space2 }
+                    spacing: FiliTheme.space2
+                    enabled: win.activeLayer !== null
+                    opacity: enabled ? 1 : 0.5
+                    Row {
+                        width: parent.width
+                        spacing: FiliTheme.space2
+                        FiliSelect {
+                            width: parent.width - opacityBox.width - parent.spacing
+                            model: win.blendModes
+                            current: win.activeLayer ? win.activeLayer.blend : "Normal"
+                            onPicked: v => win.activeLayer && win.setLayer(win.activeLayer.id, { blend: v })
+                        }
+                        Item {
+                            id: opacityBox
+                            width: 120
+                            height: 28
+                            Text { id: opacityValue; anchors { right: parent.right; verticalCenter: parent.verticalCenter } width: 44; horizontalAlignment: Text.AlignRight; text: Math.round(opacity.value * 100) + " %"; font.family: FiliTheme.font; font.pixelSize: FiliTheme.size; color: FiliTheme.textSecondary }
+                            FiliSlider {
+                                id: opacity
+                                anchors { left: parent.left; right: opacityValue.left; rightMargin: FiliTheme.space2; verticalCenter: parent.verticalCenter }
+                                // Follows the layer, except while the thumb is held
+                                Binding on value { when: !opacity.dragging; value: win.activeLayer ? win.activeLayer.opacity : 1 }
+                                onMoved: v => value = v
+                                onReleased: if (win.activeLayer) win.setLayer(win.activeLayer.id, { opacity: value })
+                            }
+                        }
+                    }
+                    Row {
+                        spacing: 2
+                        Text { anchors.verticalCenter: parent.verticalCenter; width: 40; text: Fili.tr("Lock"); font.family: FiliTheme.font; font.pixelSize: FiliTheme.size; color: FiliTheme.textSecondary }
+                        Repeater {
+                            model: [{ key: "transparency", icon: "image", tip: "Lock transparent pixels" }, { key: "pixels", icon: "brush", tip: "Lock image pixels" }, { key: "position", icon: "move", tip: "Lock position" }, { key: "all", icon: "lock", tip: "Lock all" }]
+                            Rectangle {
+                                id: lockButton
+                                required property var modelData
+                                readonly property bool on: win.activeLayer && win.activeLayer.locks ? win.activeLayer.locks[modelData.key] === true : false
+                                width: 28; height: 28; radius: FiliTheme.radiusControl
+                                color: on ? FiliTheme.surfaceActive : lockArea.containsMouse ? FiliTheme.surfaceHover : "transparent"
+                                Accessible.role: Accessible.CheckBox
+                                Accessible.name: Fili.tr(modelData.tip)
+                                Accessible.checked: on
+                                FiliIcon { anchors.centerIn: parent; size: 14; name: lockButton.modelData.icon; color: lockButton.on ? FiliTheme.accentColor : FiliTheme.textSecondary }
+                                MouseArea {
+                                    id: lockArea
+                                    anchors.fill: parent
+                                    hoverEnabled: true
+                                    onClicked: win.setLayer(win.activeLayer.id, { locks: { [lockButton.modelData.key]: !lockButton.on } })
+                                    onEntered: win.showTip(lockButton, Fili.tr(lockButton.modelData.tip))
+                                    onExited: win.hideTip(lockButton)
+                                }
+                            }
+                        }
+                    }
+                }
                 ListView {
                     id: layersView
-                    anchors { fill: parent; bottomMargin: layerButtons.height }
+                    anchors { left: parent.left; right: parent.right; top: layerHeader.bottom; bottom: parent.bottom; bottomMargin: layerButtons.height }
                     clip: true
                     model: win.layerList
                     KineticScroll {}
