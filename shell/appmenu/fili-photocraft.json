@@ -106,6 +106,34 @@
           "label": "Free Transform…",
           "keys": "Ctrl+T",
           "exec": "fili-photocraft ctl --pid %pid action edit-free-transform"
+        },
+        {
+          "sep": true
+        },
+        {
+          "label": "History",
+          "children": [
+            {
+              "label": "Step Backward",
+              "keys": "Ctrl+Alt+Z",
+              "exec": "fili-photocraft ctl --pid %pid action history-step-backward"
+            },
+            {
+              "label": "Step Forward",
+              "exec": "fili-photocraft ctl --pid %pid action history-step-forward"
+            },
+            {
+              "sep": true
+            },
+            {
+              "label": "New Snapshot",
+              "exec": "fili-photocraft ctl --pid %pid action history-new-snapshot"
+            },
+            {
+              "label": "Clear History",
+              "exec": "fili-photocraft ctl --pid %pid action history-clear"
+            }
+          ]
         }
       ]
     },

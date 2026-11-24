@@ -495,7 +495,7 @@ impl qobject::PhotoCanvas {
             r.error = QString::from(&error.unwrap_or_default());
             r.rows = layers;
             let (names, applied) = r.doc.history();
-            r.history = QString::from(&json!({"names": names, "applied": applied}).to_string());
+            r.history = QString::from(&json!({"names": names, "applied": applied, "snapshots": detail["snapshots"]}).to_string());
             r.selection = QString::from(&bounds.map(|b| format!("{b:?}")).unwrap_or_default());
             r.loaded = !detail.as_object().is_none_or(|o| o.is_empty());
             r.can_undo = detail["canUndo"].as_bool().unwrap_or(false);

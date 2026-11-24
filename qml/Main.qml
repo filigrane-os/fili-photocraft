@@ -37,6 +37,7 @@ ApplicationWindow {
     Connections { target: Fili; function onThemeChanged() { win.showFooter = Fili.footer(); } }
     Connections { target: canvas; function onChanged() { Qt.callLater(() => { win.errorShown = canvas.error !== ""; }); } }
     property string pathName: ""
+    property var snapshotId: -1
     // The Curves adjustment of the selected layer: its channel (the composite is "points"), the points and the curve to draw
     property string curveChannel: "points"
     readonly property var adjustment: activeLayer && activeLayer.adjustment ? activeLayer.adjustment : null
@@ -412,6 +413,10 @@ ApplicationWindow {
         "select-convert-to-shape": { on: () => canvas.loaded, run: () => win.runCommand("select.convertToShape", {}) },
         "select-quick-mask": { on: () => canvas.loaded, run: () => win.runCommand("select.editInQuickMaskMode", {}) },
         "edit-content-aware-fill": { on: () => canvas.loaded, run: () => win.runCommand("edit.contentAwareFill", {}) },
+        "history-new-snapshot": { on: () => canvas.loaded, run: () => win.runCommand("history.newSnapshot", {}) },
+        "history-clear": { on: () => canvas.loaded, run: () => win.runCommand("history.clear", {}) },
+        "history-step-forward": { on: () => canvas.loaded, run: () => win.runCommand("history.stepForward", {}) },
+        "history-step-backward": { on: () => canvas.loaded, run: () => win.runCommand("history.stepBackward", {}) },
         "filter-blur": { on: () => canvas.loaded, run: () => win.runCommand("filter.blur.blur", {}) },
         "filter-blur-more": { on: () => canvas.loaded, run: () => win.runCommand("filter.blur.blurMore", {}) },
         "filter-sharpen": { on: () => canvas.loaded, run: () => win.runCommand("filter.sharpen.sharpen", {}) },
@@ -541,6 +546,7 @@ ApplicationWindow {
     Shortcut { sequence: "Ctrl+Shift+C"; onActivated: win.runAction("edit-copy-merged") }
     Shortcut { sequence: "Ctrl+V"; onActivated: win.runAction("edit-paste") }
     Shortcut { sequence: "Ctrl+Shift+V"; onActivated: win.runAction("edit-paste-in-place") }
+    Shortcut { sequence: "Ctrl+Alt+Z"; onActivated: win.runAction("history-step-backward") }
     Shortcut { sequence: "Ctrl+N"; onActivated: win.runAction("file-new") }
     Shortcut { sequence: "Ctrl+Alt+I"; onActivated: win.runAction("image-size") }
     Shortcut { sequence: "Ctrl+Alt+C"; onActivated: win.runAction("image-canvas-size") }
@@ -1225,21 +1231,46 @@ ApplicationWindow {
                     FiliButton { label: Fili.tr("Delete"); enabledState: win.pathName !== ""; onClicked: { canvas.run("path.delete", JSON.stringify({ name: win.pathName })); win.pathName = ""; } }
                 }
             }
-            ListView {
-                id: historyView
-                clip: true
-                model: win.historyState.names
-                KineticScroll {}
-                onCountChanged: positionViewAtEnd()
-                delegate: FiliSidebarRow {
-                    required property string modelData
-                    required property int index
-                    width: historyView.width
-                    label: modelData
-                    selected: index === win.historyState.names.length - 1
-                    onClicked: canvas.historyGoto(index)
+            Item {
+                ListView {
+                    id: snapshotView
+                    anchors { left: parent.left; right: parent.right; top: parent.top }
+                    height: Math.min(contentHeight, 84)
+                    clip: true
+                    model: win.historyState.snapshots ?? []
+                    delegate: FiliSidebarRow {
+                        required property var modelData
+                        width: snapshotView.width
+                        glyph: ""
+                        label: modelData.name
+                        selected: win.snapshotId === modelData.id
+                        onClicked: { win.snapshotId = modelData.id; win.runCommand("history.selectSnapshot", { snapshot: modelData.id }); }
+                    }
                 }
-                FiliScrollBar { flick: historyView; anchors { top: parent.top; bottom: parent.bottom; right: parent.right } }
+                ListView {
+                    id: historyView
+                    anchors { left: parent.left; right: parent.right; top: snapshotView.bottom; bottom: historyButtons.top }
+                    clip: true
+                    model: win.historyState.names
+                    KineticScroll {}
+                    onCountChanged: positionViewAtEnd()
+                    delegate: FiliSidebarRow {
+                        required property string modelData
+                        required property int index
+                        width: historyView.width
+                        label: modelData
+                        selected: index === win.historyState.names.length - 1
+                        onClicked: canvas.historyGoto(index)
+                    }
+                    FiliScrollBar { flick: historyView; anchors { top: parent.top; bottom: parent.bottom; right: parent.right } }
+                }
+                Row {
+                    id: historyButtons
+                    anchors { left: parent.left; right: parent.right; bottom: parent.bottom; margins: FiliTheme.space2 }
+                    spacing: FiliTheme.space2
+                    FiliButton { label: Fili.tr("New Snapshot"); enabledState: canvas.loaded; onClicked: win.runCommand("history.newSnapshot", {}) }
+                    FiliButton { label: Fili.tr("Delete Snapshot"); enabledState: canvas.loaded && win.snapshotId !== -1; onClicked: { win.runCommand("history.deleteSnapshot", { snapshot: win.snapshotId }); win.snapshotId = -1; } }
+                }
             }
         }
     }

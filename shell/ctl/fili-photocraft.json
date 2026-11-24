@@ -315,6 +315,23 @@
       "label": "Content-Aware Fill"
     },
     {
+      "name": "history-new-snapshot",
+      "label": "New Snapshot"
+    },
+    {
+      "name": "history-clear",
+      "label": "Clear History"
+    },
+    {
+      "name": "history-step-forward",
+      "label": "Step Forward"
+    },
+    {
+      "name": "history-step-backward",
+      "label": "Step Backward",
+      "keys": "Ctrl+Alt+Z"
+    },
+    {
       "name": "filter-blur",
       "label": "Blur"
     },

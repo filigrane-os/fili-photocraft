@@ -377,6 +377,7 @@ fn probe_menu(file: &str) -> bool {
         ("filter.sharpen.sharpen", json!({})),
         ("filter.stylize.findEdges", json!({})),
         ("filter.stylize.oilPaint", json!({})),
+        ("history.newSnapshot", json!({"name": "probe"})),
         ("layer.pickAt", json!({"x": 10, "y": 10, "target": "layer", "select": true})),
         ("layer.new.layer", json!({})),
         ("layer.duplicate", json!({})),
