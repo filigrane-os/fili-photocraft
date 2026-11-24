@@ -495,6 +495,9 @@ ApplicationWindow {
         "panel-channels": { on: () => true, run: () => win.openPanel(1, 1) },
         "panel-paths": { on: () => true, run: () => win.openPanel(1, 2) },
         "panel-history": { on: () => true, run: () => win.openPanel(1, 3) },
+        "pointer-press": { on: () => canvas.loaded, run: (arg) => win.pointerPress(win.pointerFromArg(arg, Qt.LeftButton)) },
+        "pointer-move": { on: () => canvas.loaded, run: (arg) => win.pointerMove(win.pointerFromArg(arg, Qt.LeftButton)) },
+        "pointer-release": { on: () => canvas.loaded, run: (arg) => win.pointerRelease(win.pointerFromArg(arg, 0)) },
         // BEGIN generated commands (scripts of the menus: File, Edit, Image, Layer, Filter)
         "save-copy": { on: () => canvas.loaded, run: () => saveDialog.open() },
         "export-layers": { on: () => canvas.loaded, run: () => exportLayersDialog.open() },
@@ -601,9 +604,6 @@ ApplicationWindow {
         "filter-high-pass": { on: () => canvas.loaded, run: () => win.openParams("filter-high-pass") },
         "filter-offset": { on: () => canvas.loaded, run: () => win.openParams("filter-offset") },
         // END generated commands
-        "pointer-press": { on: () => canvas.loaded, run: (arg) => win.pointerPress(win.pointerFromArg(arg, Qt.LeftButton)) },
-        "pointer-move": { on: () => canvas.loaded, run: (arg) => win.pointerMove(win.pointerFromArg(arg, Qt.LeftButton)) },
-        "pointer-release": { on: () => canvas.loaded, run: (arg) => win.pointerRelease(win.pointerFromArg(arg, 0)) },
         "select-all": { on: () => canvas.loaded, run: () => { canvas.run("select.all", "{}")} },
         "select-inverse": { on: () => canvas.loaded, run: () => canvas.run("select.inverse", "{}") },
         "select-sky": { on: () => canvas.loaded, run: () => canvas.run("select.sky", "{}") },
